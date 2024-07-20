@@ -1,2 +1,2 @@
-# grady-cpp-lib
-Library for oddly specific use cases
+# grady-lib
+Library for specific needs
