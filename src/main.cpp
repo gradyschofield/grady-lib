@@ -2,29 +2,93 @@
 #include<iostream>
 #include<unordered_set>
 
-#include<OpenHashSetOfTriviallyCopyables.hpp>
+#include<OpenHashSetTC.hpp>
 
 using namespace std;
 
+int myRand() {
+    return rand() % 100000000;
+}
+
 int main() {
-    OpenHashSetOfTriviallyCopyables<int> myset;
+    OpenHashSetTC<int> myset;
 
     long size  = 1E8;
-    myset.reserve(size);
     auto startTime = chrono::high_resolution_clock::now();
+    size_t accum = 0;
     for (long i = 0; i < size; ++i) {
-        myset.insert(rand());
+        accum += myRand();
     }
     auto endTime = chrono::high_resolution_clock::now();
-    cout << "OpenHashSetOfTriviallyCopyables: " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << endl;
+    long randTime = chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count();
+    cout << "myRand: " << randTime <<  " " << accum << endl;
+
+    myset.reserve(size);
+    startTime = chrono::high_resolution_clock::now();
+    for (long i = 0; i < size; ++i) {
+        myset.insert(myRand());
+    }
+    endTime = chrono::high_resolution_clock::now();
+    cout << "OpenHashSetOfTriviallyCopyables: " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() - randTime << endl;
 
     unordered_set<int> s;
     s.reserve(size);
     startTime = chrono::high_resolution_clock::now();
     for (long i = 0; i < size; ++i) {
-        s.insert(rand());
+        s.insert(myRand());
     }
     endTime = chrono::high_resolution_clock::now();
-    cout << "unordered_set: " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << endl;
+    cout << "unordered_set: " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() - randTime << endl;
+
+    unordered_set<int> test;
+    for (int i : myset) {
+        test.insert(i);
+    }
+
+    cout << myset.size() << " " << test.size() << "\n";
+
+    startTime = chrono::high_resolution_clock::now();
+    unique_ptr<OpenHashSetTC<int>> myset2 = make_unique<OpenHashSetTC<int>>(myset);
+    endTime = chrono::high_resolution_clock::now();
+    cout << chrono::duration_cast<chrono::microseconds>(endTime - startTime).count() << "\n";
+
+    startTime = chrono::high_resolution_clock::now();
+    unique_ptr<unordered_set<int>> test2 = make_unique<unordered_set<int>>(test);
+    endTime = chrono::high_resolution_clock::now();
+    cout << chrono::duration_cast<chrono::microseconds>(endTime - startTime).count() << "\n";
+
+
+    startTime = chrono::high_resolution_clock::now();
+    myset2.reset(nullptr);
+    endTime = chrono::high_resolution_clock::now();
+    cout << chrono::duration_cast<chrono::microseconds>(endTime - startTime).count() << "\n";
+
+
+    startTime = chrono::high_resolution_clock::now();
+    test2.reset(nullptr);
+    endTime = chrono::high_resolution_clock::now();
+    cout << chrono::duration_cast<chrono::microseconds>(endTime - startTime).count() << "\n";
+
+    size_t numMods = 1E8;
+    for (size_t i = 0; i < numMods; ++i) {
+        int x = myRand();
+        myset.insert(x);
+        test.insert(x);
+        int y = myRand();
+        myset.erase(y);
+        test.erase(y);
+    }
+    cout << myset.size() << " " << test.size() << "\n";
+
+    for (int i : test) {
+        if (!myset.contains(i)) {
+            cout << "problem\n";
+        }
+    }
+
+    if (test.size() != myset.size()) {
+        cout << "size problem\n";
+    }
+
     return 0;
 }

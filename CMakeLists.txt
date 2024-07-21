@@ -4,11 +4,13 @@ project(grady_lib)
 set(CMAKE_CXX_STANDARD 26)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-set(CMAKE_CXX_FLAGS_DEBUG "-Og -g")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 
 include_directories(src/)
 
 set(SRC
-        src/OpenHashSetOfTriviallyCopyables.hpp)
+        src/BitPairSet.hpp
+        src/OpenHashSetTC.hpp
+        src/OpenHashMapTC.hpp)
 
-add_executable(testOpenHashSetOfTriviallyCopyables ${SRC} src/main.cpp)
+add_executable(testOpenHashSet ${SRC} src/main.cpp)
