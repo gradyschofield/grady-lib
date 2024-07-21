@@ -11,7 +11,8 @@
 #include<BitPairSet.hpp>
 
 template<typename Key, typename Value>
-requires std::is_trivially_copyable_v<Key> && std::is_trivially_copyable_v<Value>
+requires std::is_trivially_copyable_v<Key> && std::is_trivially_copyable_v<Value> &&
+         std::is_default_constructible_v<Key> && std::is_default_constructible_v<Value>
 class OpenHashMapTC {
 
     std::vector<Key> keys;
@@ -32,6 +33,7 @@ class OpenHashMapTC {
             newSize = std::max<size_t>(keys.size() + 1, std::max<size_t>(1, keys.size()) * growthFactor);
         }
         std::vector<Key> newKeys(newSize);
+        std::vector<Value> newValues(newSize);
         BitPairSet newSetFlags(newSize);
         for (size_t i = 0; i < keys.size(); ++i) {
             if (!setFlags.isFirstSet(i)) {
@@ -46,8 +48,10 @@ class OpenHashMapTC {
             }
             newSetFlags.setBoth(idx);
             newKeys[idx] = k;
+            newValues[idx] = values[i];
         }
         std::swap(keys, newKeys);
+        std::swap(values, newValues);
         std::swap(setFlags, newSetFlags);
     }
 

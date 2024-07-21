@@ -27,7 +27,7 @@
 #include<BitPairSet.hpp>
 
 template<typename Key>
-requires std::is_trivially_copyable_v<Key>
+requires std::is_trivially_copyable_v<Key> && std::is_default_constructible_v<Key>
 class OpenHashSetTC {
 
     std::vector<Key> keys;
