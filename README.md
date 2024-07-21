@@ -1,2 +1,2 @@
 # grady-lib
-Library for specific needs
+Library for oddly specific use cases
