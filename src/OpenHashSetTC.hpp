@@ -22,6 +22,7 @@
 #define GRADY_LIB_OPENHASHSETTC_HPP
 
 #include<type_traits>
+#include<fstream>
 #include<vector>
 
 #include<BitPairSet.hpp>
@@ -69,28 +70,33 @@ class OpenHashSetTC {
 public:
 
     void insert(Key const & key) {
-        size_t hash = std::hash<Key>{}(key);
-        size_t idx = hash % keys.size();
+        size_t hash;
+        size_t idx;
+        size_t startIdx;
         bool doesContain = false;
         size_t firstUnsetIdx = -1;
         bool isFirstUnsetIdxSet = false;
-        size_t startIdx = idx;
-        for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
-            if (!isFirstUnsetIdxSet && !isSet) {
-                firstUnsetIdx = idx;
-                isFirstUnsetIdxSet = true;
+        if (!keys.empty()) {
+            hash = std::hash<Key>{}(key);
+            idx = hash % keys.size();
+            startIdx = idx;
+            for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
+                if (!isFirstUnsetIdxSet && !isSet) {
+                    firstUnsetIdx = idx;
+                    isFirstUnsetIdxSet = true;
+                }
+                if (isSet && keys[idx] == key) {
+                    doesContain = true;
+                    break;
+                }
+                if (wasSet && keys[idx] == key) {
+                    doesContain = false;
+                    break;
+                }
+                ++idx;
+                idx = idx == keys.size() ? 0 : idx;
+                if (startIdx == idx) break;
             }
-            if (isSet && keys[idx] == key) {
-                doesContain = true;
-                break;
-            }
-            if (wasSet && keys[idx] == key) {
-                doesContain = false;
-                break;
-            }
-            ++idx;
-            idx = idx == keys.size() ? 0 : idx;
-            if (startIdx == idx) break;
         }
         if (doesContain) {
             return;
@@ -114,6 +120,7 @@ public:
     }
 
     bool contains(Key const & key) {
+        if (keys.empty()) return false;
         size_t hash = std::hash<Key>{}(key);
         size_t idx = hash % keys.size();
         size_t startIdx = idx;
@@ -204,6 +211,48 @@ public:
 
     size_t size() const {
         return setSize;
+    }
+
+    /*
+     * 8 set size
+     * 8 key size
+     * 8 load factor
+     * 8 growth factor
+     * 8 file offset from beg for the BitPairSet
+     * sizeof(Key)*key size
+     * (possible 4 byte pad, use offset above to skip over it)
+     * 8 bit pair set size
+     * 8 underlying array size
+     * 4 * underlying array size
+     */
+    void write(std::string filename) {
+        std::ofstream ofs(filename, std::ios::binary);
+        ofs.write((char*) &setSize, 8);
+        size_t keySize = keys.size();
+        ofs.write((char*)&keySize, 8);
+        ofs.write((char*)&loadFactor, 8);
+        ofs.write((char*)&growthFactor, 8);
+        size_t keyArraySize = sizeof(Key) * keySize;
+        size_t bitPairSetOffset = ofs.tellp();
+        bool writePad;
+        if (keyArraySize % 8 == 0) {
+            bitPairSetOffset += 8 + keyArraySize;
+            writePad = false;
+        } else {
+            bitPairSetOffset += 12 + keyArraySize;
+            writePad = true;
+        }
+        ofs.write((char*)&bitPairSetOffset, 8);
+        ofs.write((char*)keys.data(), sizeof(Key) * keySize);
+        if (writePad) {
+            int32_t x = 0;
+            ofs.write((char*)&x, 4);
+        }
+        setFlags.write(ofs);
+    }
+
+    static OpenHashSetTC mmap(std::string filename) {
+
     }
 };
 

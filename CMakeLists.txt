@@ -14,3 +14,4 @@ set(SRC
         src/OpenHashMapTC.hpp)
 
 add_executable(testOpenHashSet ${SRC} src/main.cpp)
+add_executable(testOpenHashMapTC ${SRC} src/test/TestOpenHashMapTC.cpp)

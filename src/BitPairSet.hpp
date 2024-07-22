@@ -20,19 +20,28 @@ class BitPairSet {
     static constexpr size_t mask = (1 << bitShiftForDivision) - 1;
     UnderlyingInt * underlying = nullptr;
     size_t setSize = 0;
+    bool readOnly = false;
 
-    inline size_t getUnderlyingLength(size_t len) {
+    inline size_t getUnderlyingLength(size_t len) const {
         size_t base = len >> bitShiftForDivision;
         return base + ((mask & len) != 0 ? 1 : 0);
     }
 
     inline void unset(size_t idx, UnderlyingInt pairMask) {
+        if (readOnly) {
+            std::cout << "Tried to modify read only BitPairSet\n";
+            exit(1);
+        }
         size_t base = idx >> bitShiftForDivision;
         size_t offsetShift = (idx & mask) << 1;
         underlying[base] &= ~(pairMask << offsetShift);
     }
 
     inline void set(size_t idx, UnderlyingInt pairMask) {
+        if (readOnly) {
+            std::cout << "Tried to modify read only BitPairSet\n";
+            exit(1);
+        }
         size_t base = idx >> bitShiftForDivision;
         size_t offsetShift = (idx & mask) << 1;
         underlying[base] |= pairMask << offsetShift;
@@ -49,6 +58,11 @@ public:
 
     BitPairSet() = default;
 
+    BitPairSet(UnderlyingInt * underlying, size_t setSize)
+        : underlying(underlying), setSize(setSize), readOnly(true)
+    {
+    }
+
     BitPairSet(BitPairSet const & s) {
         size_t len = getUnderlyingLength(s.setSize);
         underlying = new UnderlyingInt[len];
@@ -57,13 +71,15 @@ public:
     }
 
     BitPairSet & operator=(BitPairSet const & s) {
-        BitPairSet t(s);
-        std::swap(t, *this);
+        size_t len = getUnderlyingLength(s.setSize);
+        underlying = new UnderlyingInt[len];
+        memcpy(underlying, s.underlying, len * sizeof(UnderlyingInt));
+        setSize = s.setSize;
         return *this;
     }
 
     BitPairSet(BitPairSet && s)
-        : underlying(s.underlying), setSize(s.setSize)
+        : underlying(s.underlying), setSize(s.setSize), readOnly(s.readOnly)
     {
         s.underlying = nullptr;
         s.setSize = 0;
@@ -72,6 +88,7 @@ public:
     BitPairSet & operator=(BitPairSet && s) {
         underlying = s.underlying;
         setSize = s.setSize;
+        readOnly = s.readOnly;
         s.underlying = nullptr;
         s.setSize = 0;
         return *this;
@@ -83,15 +100,28 @@ public:
         memset(underlying, 0, getUnderlyingLength(size) * sizeof(UnderlyingInt));
     }
 
+    void write(std::ofstream & ofs) const {
+        ofs.write((char*)&setSize, 8);
+        size_t len = getUnderlyingLength(setSize);
+        ofs.write((char*)&len, 8);
+        ofs.write((char*)underlying, sizeof(UnderlyingInt) * len);
+    }
+
     size_t size() const {
         return setSize;
     }
 
     ~BitPairSet() {
-        delete [] underlying;
+        if (!readOnly) {
+            delete[] underlying;
+        }
     }
 
     void resize(size_t size) {
+        if (readOnly) {
+            std::cout << "Tried to resize a read only BitPairSet\n";
+            exit(1);
+        }
         size_t newSize = getUnderlyingLength(size);
         UnderlyingInt * newUnderlying = new UnderlyingInt[newSize];
         size_t currentSize = getUnderlyingLength(setSize);
