@@ -4,11 +4,19 @@
 
 /*
  * In the context of simulations, I've needed to duplicate very large unordered_set's.  Creating and destroying
- * unordered_sets is quite slow.  Creation can be made 10x faster when the keys are trivially copyable if we
- * implement the set as an open address hash set by using memcpy to do the work.  Deletion is 100x faster.
+ * unordered_sets is quite slow.  Creation can be made faster when the keys are trivially copyable if we
+ * implement the set as an open address hash set and use memcpy to do the work.  A set of 100 million ints
+ * is 30x faster to copy and deletion is 150x faster.
+ *
+ * The write method writes to disk in a format amenable to memory mapped loading.  Any write operations
+ * on a set that's been loaded from disk will cause a copy. If read-only operations are used exclusively,
+ * then no copy is ever created.
+ *
+ * TODO: byte ordering on disk IO
  *
  * Interface:
  * ---------
+ * OpenHashSetTC(filename)
  * insert
  * contains
  * erase
@@ -16,11 +24,17 @@
  * size
  * begin
  * end
+ * write
  */
 
 #ifndef GRADY_LIB_OPENHASHSETTC_HPP
 #define GRADY_LIB_OPENHASHSETTC_HPP
 
+#include<fcntl.h>
+#include<sys/mman.h>
+#include<unistd.h>
+
+#include<cstddef>
 #include<type_traits>
 #include<fstream>
 #include<vector>
@@ -31,11 +45,16 @@ template<typename Key>
 requires std::is_trivially_copyable_v<Key> && std::is_default_constructible_v<Key>
 class OpenHashSetTC {
 
-    std::vector<Key> keys;
+    Key * keys = nullptr;
     BitPairSet setFlags;
     double loadFactor = 0.8;
     double growthFactor = 1.2;
+    size_t keySize = 0;
     size_t setSize = 0;
+    int fd = -1;
+    size_t mappingSize = 0;
+    void * memoryMapping = nullptr;
+    bool readOnly = false;
 
     void rehash(size_t size = 0) {
         size_t newSize;
@@ -45,29 +64,121 @@ class OpenHashSetTC {
             }
             newSize = size / loadFactor;
         } else {
-            newSize = std::max<size_t>(keys.size() + 1, std::max<size_t>(1, keys.size()) * growthFactor);
+            newSize = std::max<size_t>(keySize + 1, std::max<size_t>(1, keySize) * growthFactor);
         }
-        std::vector<Key> newKeys(newSize);
+        Key * newKeys = new Key[newSize];
         BitPairSet newSetFlags(newSize);
-        for (size_t i = 0; i < keys.size(); ++i) {
+        for (size_t i = 0; i < keySize; ++i) {
             if (!setFlags.isFirstSet(i)) {
                 continue;
             }
             Key const & k = keys[i];
             size_t hash = std::hash<Key>{}(k);
-            size_t idx = hash % newKeys.size();
+            size_t idx = hash % newSize;
             while (newSetFlags.isFirstSet(idx)) {
                 ++idx;
-                idx = idx == newKeys.size() ? 0 : idx;
+                idx = idx == newSize ? 0 : idx;
             }
             newSetFlags.setBoth(idx);
             newKeys[idx] = k;
         }
-        std::swap(keys, newKeys);
+        delete [] keys;
+        keys = newKeys;
+        keySize = newSize;
         std::swap(setFlags, newSetFlags);
     }
 
 public:
+
+    OpenHashSetTC() = default;
+
+    OpenHashSetTC(OpenHashSetTC const & s)
+        : keys(new Key[s.keySize]), keySize(s.keySize), setFlags(s.setFlags), loadFactor(s.loadFactor),
+            growthFactor(s.growthFactor), setSize(s.setSize)
+    {
+        memcpy(keys, s.keys, sizeof(Key) * keySize);
+    }
+
+    OpenHashSetTC(OpenHashSetTC && s)
+        : keys(s.keys), keySize(s.keySize), setFlags(move(s.setFlags)), loadFactor(s.loadFactor),
+          growthFactor(s.growthFactor), setSize(s.setSize)
+    {
+        s.keys = nullptr;
+        s.keySize = 0;
+        s.setSize = 0;
+    }
+
+    explicit OpenHashSetTC(std::string filename) {
+        fd = open(filename.c_str(), O_RDONLY);
+        if (fd < 0) {
+            std::cout << "Error opening file " << filename << "\n";
+            exit(1);
+        }
+        mappingSize = std::filesystem::file_size(filename);
+        memoryMapping = mmap(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
+        if (memoryMapping == MAP_FAILED) {
+            std::cout << "memory map failed: " << strerror(errno) << "\n";
+            exit(1);
+        }
+        std::byte * ptr = static_cast<std::byte*>(memoryMapping);
+        setSize = *static_cast<size_t*>(static_cast<void*>(ptr));
+        ptr += 8;
+        keySize = *static_cast<size_t*>(static_cast<void*>(ptr));
+        ptr += 8;
+        loadFactor = *static_cast<double*>(static_cast<void*>(ptr));
+        ptr += 8;
+        growthFactor = *static_cast<double*>(static_cast<void*>(ptr));
+        ptr += 8;
+        size_t bitPairSetOffset = *static_cast<size_t*>(static_cast<void*>(ptr));
+        ptr += 8;
+        keys = static_cast<Key*>(static_cast<void*>(ptr));
+        setFlags = BitPairSet(static_cast<void*>(bitPairSetOffset + static_cast<std::byte*>(memoryMapping)));
+        readOnly = true;
+    }
+
+    ~OpenHashSetTC() {
+        if (memoryMapping) {
+            munmap(memoryMapping, mappingSize);
+            close(fd);
+        } else {
+            delete [] keys;
+        }
+    }
+
+    OpenHashSetTC & operator=(OpenHashSetTC const & s) {
+        if (this == &s) {
+            return *this;
+        }
+        keys = new Key[s.keySize];
+        memcpy(keys, s.keys, sizeof(Key) * keySize);
+        keySize = s.keySize;
+        setFlags = s.setFlags;
+        loadFactor = s.loadFactor;
+        growthFactor = s.growthFactor;
+        setSize = s.setSize;
+        return *this;
+    }
+
+    OpenHashSetTC & operator=(OpenHashSetTC && s) noexcept {
+        keys = s.keys;
+        keySize = s.keySize;
+        setFlags = s.setFlags;
+        loadFactor = s.loadFactor;
+        growthFactor = s.growthFactor;
+        setSize = s.setSize;
+        readOnly = s.readOnly;
+        fd = s.fd;
+        memoryMapping = s.memoryMapping;
+        mappingSize = s.mappingSize;
+
+        s.keys = nullptr;
+        s.keySize = 0;
+        s.setSize = 0;
+        s.fd = -1;
+        s.memoryMapping = nullptr;
+        s.mappingSize = 0;
+        return *this;
+    }
 
     void insert(Key const & key) {
         size_t hash;
@@ -76,9 +187,9 @@ public:
         bool doesContain = false;
         size_t firstUnsetIdx = -1;
         bool isFirstUnsetIdxSet = false;
-        if (!keys.empty()) {
+        if (keySize > 0) {
             hash = std::hash<Key>{}(key);
-            idx = hash % keys.size();
+            idx = hash % keySize;
             startIdx = idx;
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
                 if (!isFirstUnsetIdxSet && !isSet) {
@@ -94,21 +205,21 @@ public:
                     break;
                 }
                 ++idx;
-                idx = idx == keys.size() ? 0 : idx;
+                idx = idx == keySize ? 0 : idx;
                 if (startIdx == idx) break;
             }
         }
         if (doesContain) {
             return;
         }
-        if (setSize >= keys.size() * loadFactor) {
+        if (setSize >= keySize * loadFactor) {
             rehash();
             hash = std::hash<Key>{}(key);
-            idx = hash % keys.size();
+            idx = hash % keySize;
             startIdx = idx;
             while (setFlags.isFirstSet(idx)) {
                 ++idx;
-                idx = idx == keys.size() ? 0 : idx;
+                idx = idx == keySize ? 0 : idx;
                 if (startIdx == idx) break;
             }
         } else {
@@ -120,9 +231,9 @@ public:
     }
 
     bool contains(Key const & key) {
-        if (keys.empty()) return false;
+        if (keySize == 0) return false;
         size_t hash = std::hash<Key>{}(key);
-        size_t idx = hash % keys.size();
+        size_t idx = hash % keySize;
         size_t startIdx = idx;
         for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
             if (isSet && keys[idx] == key) {
@@ -132,7 +243,7 @@ public:
                 return false;
             }
             ++idx;
-            idx = idx == keys.size() ? 0 : idx;
+            idx = idx == keySize ? 0 : idx;
             if (startIdx == idx) break;
         }
         return false;
@@ -140,7 +251,7 @@ public:
 
     void erase(Key const & key) {
         size_t hash = std::hash<Key>{}(key);
-        size_t idx = hash % keys.size();
+        size_t idx = hash % keySize;
         size_t startIdx = idx;
         for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
             if (keys[idx] == key) {
@@ -151,10 +262,9 @@ public:
                 return;
             }
             ++idx;
-            idx = idx == keys.size() ? 0 : idx;
+            idx = idx == keySize ? 0 : idx;
             if (startIdx == idx) break;
         }
-        return;
     }
 
     void reserve(size_t size) {
@@ -183,11 +293,11 @@ public:
         }
 
         iterator & operator++() {
-            if (idx == container->keys.size()) {
+            if (idx == container->keySize) {
                 return *this;
             }
             ++idx;
-            while (idx < container->keys.size() && !container->setFlags.isFirstSet(idx)) {
+            while (idx < container->keySize && !container->setFlags.isFirstSet(idx)) {
                 ++idx;
             }
             return *this;
@@ -196,17 +306,17 @@ public:
 
     iterator begin() {
         if (setSize == 0) {
-            return iterator(keys.size(), this);
+            return iterator(keySize, this);
         }
         size_t idx = 0;
-        while (idx < keys.size() && !setFlags.isFirstSet(idx)) {
+        while (idx < keySize && !setFlags.isFirstSet(idx)) {
             ++idx;
         }
         return iterator(idx, this);
     }
 
     iterator end() {
-        return iterator(keys.size(), this);
+        return iterator(keySize, this);
     }
 
     size_t size() const {
@@ -228,7 +338,6 @@ public:
     void write(std::string filename) {
         std::ofstream ofs(filename, std::ios::binary);
         ofs.write((char*) &setSize, 8);
-        size_t keySize = keys.size();
         ofs.write((char*)&keySize, 8);
         ofs.write((char*)&loadFactor, 8);
         ofs.write((char*)&growthFactor, 8);
@@ -243,7 +352,7 @@ public:
             writePad = true;
         }
         ofs.write((char*)&bitPairSetOffset, 8);
-        ofs.write((char*)keys.data(), sizeof(Key) * keySize);
+        ofs.write((char*)keys, sizeof(Key) * keySize);
         if (writePad) {
             int32_t x = 0;
             ofs.write((char*)&x, 4);
@@ -251,9 +360,6 @@ public:
         setFlags.write(ofs);
     }
 
-    static OpenHashSetTC mmap(std::string filename) {
-
-    }
 };
 
 #endif

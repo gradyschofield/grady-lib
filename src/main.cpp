@@ -1,3 +1,4 @@
+#include<bit>
 #include<chrono>
 #include<iostream>
 #include<unordered_set>
@@ -80,6 +81,7 @@ int main() {
     }
     cout << myset.size() << " " << test.size() << "\n";
 
+    startTime = chrono::high_resolution_clock::now();
     for (int i : test) {
         if (!myset.contains(i)) {
             cout << "problem\n";
@@ -89,6 +91,31 @@ int main() {
     if (test.size() != myset.size()) {
         cout << "size problem\n";
     }
+    endTime = chrono::high_resolution_clock::now();
+    cout << "testing from memory time: " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << "\n";
+
+    cout << "writing to disk...\n";
+    myset.write("a_grand_old_set.bin");
+
+    startTime = chrono::high_resolution_clock::now();
+    OpenHashSetTC<int> myset3("a_grand_old_set.bin");
+    endTime = chrono::high_resolution_clock::now();
+    cout << "mmap load: " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << "\n";
+
+    startTime = chrono::high_resolution_clock::now();
+    for (int i : test) {
+        if (!myset3.contains(i)) {
+            cout << "problem\n";
+        }
+    }
+
+    if (test.size() != myset3.size()) {
+        cout << "size problem\n";
+    }
+    endTime = chrono::high_resolution_clock::now();
+    cout << "testing from mmap load: " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << "\n";
+
+    cout << (endian::native == endian::big ? "big" : "little") << "\n";
 
     return 0;
 }

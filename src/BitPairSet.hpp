@@ -3,7 +3,7 @@
 //
 
 /*
- * For use in the OpenHashSet/Map.  Copying large vector<bool>'s is mighty slow.
+ * For use in the OpenHashSet/Map.  Copying large vector<bool>'s is mighty slow on my current system.
  */
 
 #ifndef GRADY_LIB_BITPAIRSET_HPP
@@ -12,6 +12,8 @@
 #include<algorithm>
 #include<bit>
 #include<cstdint>
+#include<fstream>
+#include<iostream>
 #include<utility>
 
 class BitPairSet {
@@ -70,7 +72,24 @@ public:
         setSize = s.setSize;
     }
 
+    BitPairSet(void * memoryMapping)
+        : underlying(static_cast<UnderlyingInt*>(static_cast<void*>(8 + static_cast<std::byte*>(memoryMapping)))),
+          setSize(*static_cast<size_t*>(memoryMapping)),
+          readOnly(true)
+    {
+    }
+
+    ~BitPairSet() {
+        if (!readOnly) {
+            delete[] underlying;
+        }
+    }
+
+
     BitPairSet & operator=(BitPairSet const & s) {
+        if (this == &s) {
+            return *this;
+        }
         size_t len = getUnderlyingLength(s.setSize);
         underlying = new UnderlyingInt[len];
         memcpy(underlying, s.underlying, len * sizeof(UnderlyingInt));
@@ -85,7 +104,7 @@ public:
         s.setSize = 0;
     }
 
-    BitPairSet & operator=(BitPairSet && s) {
+    BitPairSet & operator=(BitPairSet && s) noexcept {
         underlying = s.underlying;
         setSize = s.setSize;
         readOnly = s.readOnly;
@@ -103,18 +122,11 @@ public:
     void write(std::ofstream & ofs) const {
         ofs.write((char*)&setSize, 8);
         size_t len = getUnderlyingLength(setSize);
-        ofs.write((char*)&len, 8);
         ofs.write((char*)underlying, sizeof(UnderlyingInt) * len);
     }
 
     size_t size() const {
         return setSize;
-    }
-
-    ~BitPairSet() {
-        if (!readOnly) {
-            delete[] underlying;
-        }
     }
 
     void resize(size_t size) {
