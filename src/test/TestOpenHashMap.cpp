@@ -21,7 +21,7 @@ string randString() {
 }
 
 int main(int argc, char ** argv) {
-    long mapSize = 1E7;
+    long mapSize = 1E8;
     gradylib::OpenHashMap<string, long> map;
     map.reserve(mapSize);
     vector<string> strs;
@@ -48,6 +48,7 @@ int main(int argc, char ** argv) {
     endTime = chrono::high_resolution_clock::now();
     cout << "unordered_map build time " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << " ms\n";
 
+    startTime = chrono::high_resolution_clock::now();
     for (auto & p : test) {
         if (!map.contains(p.first)) {
             cout << "Missing key\n";
@@ -58,10 +59,26 @@ int main(int argc, char ** argv) {
     if (test.size() != map.size()) {
         cout << "size problem";
     }
+    endTime = chrono::high_resolution_clock::now();
+    cout << "OpenHashMap check " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << " ms\n";
 
     gradylib::writeMappable("stringmap.bin", map);
 
     gradylib::MMapS2IOpenHashMap<long> map2("stringmap.bin");
+
+    startTime = chrono::high_resolution_clock::now();
+    for (auto & p : test) {
+        if (!map2.contains(p.first)) {
+            cout << "Missing key\n";
+        } else if (map2[p.first] != p.second) {
+            cout << "Wrong value\n";
+        }
+    }
+    if (test.size() != map2.size()) {
+        cout << "size problem";
+    }
+    endTime = chrono::high_resolution_clock::now();
+    cout << "MMapS2IOpenHashMap check " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << " ms\n";
 
     return 0;
 }

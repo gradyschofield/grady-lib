@@ -1,6 +1,26 @@
-//
-// Created by Grady Schofield on 7/23/24.
-//
+/*
+MIT License
+
+Copyright (c) 2024 Grady Schofield
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 
 #include<fcntl.h>
 #include<sys/mman.h>
@@ -110,13 +130,13 @@ namespace gradylib {
             }
         }
 
-        std::string_view getKey(std::byte const * ptr) {
+        std::string_view getKey(std::byte const * ptr) const {
             int32_t len = *static_cast<int32_t const *>(static_cast<void const *>(ptr));
             char const * p = static_cast<char const *>(static_cast<void const *>(ptr + 4));
             return std::string_view(p, len);
         }
 
-        std::byte const * incKeyPtr(std::byte const * keyPtr) {
+        std::byte const * incKeyPtr(std::byte const * keyPtr) const {
             int32_t len = *static_cast<int32_t const *>(static_cast<void const *>(keyPtr));
             return keyPtr + 4 + len + (4 - len%4);
         }
@@ -166,20 +186,30 @@ namespace gradylib {
 
         bool contains(std::string_view key) {
             size_t hash = std::hash<std::string_view>{}(key);
-            size_t idx = hash % keys.shize();
+            size_t idx = hash % keySize;
             size_t startIdx = idx;
+            std::byte const *keyPtr = static_cast<std::byte const *>(keys) + keyOffsets[idx];
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
-                if (isSet && keys[idx] == key) {
+                std::string_view k = getKey(keyPtr);
+                if (isSet && k == key) {
                     return true;
                 }
-                if (wasSet && keys[idx] == key) {
+                if (wasSet && k == key) {
                     return false;
                 }
+                keyPtr = incKeyPtr(keyPtr);
                 ++idx;
-                idx = idx == keys.size() ? 0 : idx;
+                if (idx == keySize) {
+                    idx = 0;
+                    keyPtr = static_cast<std::byte const *>(keys);
+                }
                 if (startIdx == idx) break;
             }
             return false;
+        }
+
+        size_t size() const {
+            return mapSize;
         }
 
         OpenHashMap<std::string, IndexType> clone() const {
