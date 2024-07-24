@@ -61,7 +61,8 @@ SOFTWARE.
 #include<BitPairSet.hpp>
 
 namespace gradylib {
-    template<typename Key> requires std::is_trivially_copyable_v<Key> && std::is_default_constructible_v<Key>
+    template<typename Key, typename HashFunction = std::hash<Key>>
+    requires std::is_trivially_copyable_v<Key> && std::is_default_constructible_v<Key>
     class OpenHashSetTC {
 
         Key *keys = nullptr;
@@ -74,6 +75,7 @@ namespace gradylib {
         size_t mappingSize = 0;
         void *memoryMapping = nullptr;
         bool readOnly = false;
+        HashFunction hashFunction = HashFunction{};
 
         void rehash(size_t size = 0) {
             size_t newSize;
@@ -92,7 +94,7 @@ namespace gradylib {
                     continue;
                 }
                 Key const &k = keys[i];
-                size_t hash = std::hash<Key>{}(k);
+                size_t hash = hashFunction(k);
                 size_t idx = hash % newSize;
                 while (newSetFlags.isFirstSet(idx)) {
                     ++idx;
@@ -205,7 +207,7 @@ namespace gradylib {
             size_t firstUnsetIdx = -1;
             bool isFirstUnsetIdxSet = false;
             if (keySize > 0) {
-                hash = std::hash<Key>{}(key);
+                hash = hashFunction(key);
                 idx = hash % keySize;
                 startIdx = idx;
                 for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
@@ -231,7 +233,7 @@ namespace gradylib {
             }
             if (setSize >= keySize * loadFactor) {
                 rehash();
-                hash = std::hash<Key>{}(key);
+                hash = hashFunction(key);
                 idx = hash % keySize;
                 startIdx = idx;
                 while (setFlags.isFirstSet(idx)) {
@@ -249,7 +251,7 @@ namespace gradylib {
 
         bool contains(Key const &key) {
             if (keySize == 0) return false;
-            size_t hash = std::hash<Key>{}(key);
+            size_t hash = hashFunction(key);
             size_t idx = hash % keySize;
             size_t startIdx = idx;
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
@@ -267,7 +269,7 @@ namespace gradylib {
         }
 
         void erase(Key const &key) {
-            size_t hash = std::hash<Key>{}(key);
+            size_t hash = hashFunction(key);
             size_t idx = hash % keySize;
             size_t startIdx = idx;
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {

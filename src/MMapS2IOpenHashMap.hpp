@@ -190,6 +190,9 @@ namespace gradylib {
         }
 
         bool contains(std::string_view key) {
+            if (keySize == 0) {
+                return false;
+            }
             size_t hash = std::hash<std::string_view>{}(key);
             size_t idx = hash % keySize;
             size_t startIdx = idx;
@@ -243,7 +246,7 @@ namespace gradylib {
                 return container->getKey(keyPtr);
             }
 
-            IndexType &value() {
+            IndexType const & value() {
                 return container->values[idx];
             }
 

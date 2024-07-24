@@ -5,7 +5,9 @@
 #include<chrono>
 #include<string>
 #include<unordered_map>
+#include<unordered_set>
 
+#include<AltIntHash.hpp>
 #include<OpenHashMap.hpp>
 #include<MMapS2IOpenHashMap.hpp>
 
@@ -34,16 +36,19 @@ int main(int argc, char ** argv) {
     cout << "string create time " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << " ms\n";
 
     startTime = chrono::high_resolution_clock::now();
+    long idx = 0;
     for (long i = 0; i < mapSize; ++i) {
-        map[strs[i]] = map.size();
+        map[strs[i]] = idx++;
     }
     endTime = chrono::high_resolution_clock::now();
     cout << "build time " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << " ms\n";
+    cout << "Map size " << map.size() << "\n";
 
     unordered_map<string, long> test;
     startTime = chrono::high_resolution_clock::now();
+    idx = 0;
     for (long i = 0; i < mapSize; ++i) {
-        test[strs[i]] = test.size();
+        test[strs[i]] = idx++;
     }
     endTime = chrono::high_resolution_clock::now();
     cout << "unordered_map build time " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << " ms\n";
@@ -81,11 +86,34 @@ int main(int argc, char ** argv) {
     cout << "MMapS2IOpenHashMap check " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << " ms\n";
 
     int num = 0;
+    struct AltHash {
+        size_t operator()(long const &i) const noexcept {
+            return i * 94123453451234 + 4123451435554345;
+        }
+    };
+    gradylib::OpenHashMap<long, string, gradylib::AltHash<long>> sidx;
+    //sidx.reserve(map2.size());
     for (auto [str, idx] : map2) {
-        cout << str << " " << idx << "\n";
-        ++num;
-        if (num == 20) break;
+        //sidx.emplace(idx, string(str));
+        sidx[idx] = string(str);
     }
+
+    if (sidx.size() != map2.size()) {
+        cout << "Size problem for sidx " << sidx.size() << " " << map2.size() << "\n";
+        exit(1);
+    }
+
+    for (auto [idx, str] : sidx) {
+        if (!map2.contains(str)) {
+            cout << "sidx doesn't contain " << idx << "\n";
+            exit(1);
+        } else if (map2[str] != idx) {
+            cout << "sidx doesn't contain write value for " << idx << " " << str << " " << sidx[idx] << "\n";
+            exit(1);
+        }
+    }
+
+
 
     return 0;
 }

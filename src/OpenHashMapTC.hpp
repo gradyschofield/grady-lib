@@ -31,18 +31,19 @@ SOFTWARE.
 #include<BitPairSet.hpp>
 
 namespace gradylib {
-    template<typename Key, typename Value> requires std::is_trivially_copyable_v<Key> &&
-                                                    std::is_trivially_copyable_v<Value> &&
-                                                    std::is_default_constructible_v<Key> &&
-                                                    std::is_default_constructible_v<Value>
+    template<typename Key, typename Value, typename HashFunction = std::hash<Key>>
+    requires std::is_trivially_copyable_v<Key> &&
+             std::is_trivially_copyable_v<Value> &&
+             std::is_default_constructible_v<Key> &&
+             std::is_default_constructible_v<Value>
     class OpenHashMapTC {
-
         std::vector<Key> keys;
         std::vector<Value> values;
         BitPairSet setFlags;
         double loadFactor = 0.8;
         double growthFactor = 1.2;
         size_t mapSize = 0;
+        HashFunction hashFunction = HashFunction{};
 
         void rehash(size_t size = 0) {
             size_t newSize;
@@ -62,7 +63,7 @@ namespace gradylib {
                     continue;
                 }
                 Key const &k = keys[i];
-                size_t hash = std::hash<Key>{}(k);
+                size_t hash = hashFunction(k);
                 size_t idx = hash % newKeys.size();
                 while (newSetFlags.isFirstSet(idx)) {
                     ++idx;
@@ -86,7 +87,7 @@ namespace gradylib {
             size_t firstUnsetIdx = -1;
             bool isFirstUnsetIdxSet = false;
             if (!keys.empty()) {
-                hash = std::hash<Key>{}(key);
+                hash = hashFunction(key);
                 idx = hash % keys.size();
                 startIdx = idx;
                 for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
@@ -107,7 +108,7 @@ namespace gradylib {
             }
             if (mapSize >= keys.size() * loadFactor) {
                 rehash();
-                hash = std::hash<Key>{}(key);
+                hash = hashFunction(key);
                 idx = hash % keys.size();
                 startIdx = idx;
                 while (setFlags.isFirstSet(idx)) {
@@ -125,36 +126,40 @@ namespace gradylib {
         }
 
         void emplace(Key const &key, Value const &value) {
-            size_t hash = std::hash<Key>{}(key);
-            size_t idx = hash % keys.size();
+            size_t hash = 0;
+            size_t idx = 0;
             bool doesContain = false;
             size_t firstUnsetIdx = -1;
             bool isFirstUnsetIdxSet = false;
             size_t startIdx = idx;
-            for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
-                if (!isFirstUnsetIdxSet && !isSet) {
-                    firstUnsetIdx = idx;
-                    isFirstUnsetIdxSet = true;
+            if (keys.size() > 0) {
+                hash = hashFunction(key);
+                idx = hash % keys.size();
+                for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
+                    if (!isFirstUnsetIdxSet && !isSet) {
+                        firstUnsetIdx = idx;
+                        isFirstUnsetIdxSet = true;
+                    }
+                    if (isSet && keys[idx] == key) {
+                        values[idx] = value;
+                        doesContain = true;
+                        break;
+                    }
+                    if (wasSet && keys[idx] == key) {
+                        doesContain = false;
+                        break;
+                    }
+                    ++idx;
+                    idx = idx == keys.size() ? 0 : idx;
+                    if (startIdx == idx) break;
                 }
-                if (isSet && keys[idx] == key) {
-                    values[idx] = value;
-                    doesContain = true;
-                    break;
-                }
-                if (wasSet && keys[idx] == key) {
-                    doesContain = false;
-                    break;
-                }
-                ++idx;
-                idx = idx == keys.size() ? 0 : idx;
-                if (startIdx == idx) break;
             }
             if (doesContain) {
                 return;
             }
             if (mapSize >= keys.size() * loadFactor) {
                 rehash();
-                hash = std::hash<Key>{}(key);
+                hash = hashFunction(key);
                 idx = hash % keys.size();
                 startIdx = idx;
                 while (setFlags.isFirstSet(idx)) {
@@ -172,7 +177,10 @@ namespace gradylib {
         }
 
         bool contains(Key const &key) {
-            size_t hash = std::hash<Key>{}(key);
+            if (keys.empty()) {
+                return false;
+            }
+            size_t hash = hashFunction(key);
             size_t idx = hash % keys.size();
             size_t startIdx = idx;
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
@@ -190,7 +198,7 @@ namespace gradylib {
         }
 
         void erase(Key const &key) {
-            size_t hash = std::hash<Key>{}(key);
+            size_t hash = hashFunction(key);
             size_t idx = hash % keys.size();
             size_t startIdx = idx;
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {

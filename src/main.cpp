@@ -6,13 +6,15 @@
 #include<OpenHashSetTC.hpp>
 
 using namespace std;
+using namespace gradylib;
 
 int myRand() {
     return rand() % 100000000;
 }
 
 int main() {
-    OpenHashSetTC<int> myset;
+    using HashSet = OpenHashSetTC<int>;
+    HashSet myset;
 
     long size  = 1E8;
     auto startTime = chrono::high_resolution_clock::now();
@@ -49,7 +51,7 @@ int main() {
     cout << myset.size() << " " << test.size() << "\n";
 
     startTime = chrono::high_resolution_clock::now();
-    unique_ptr<OpenHashSetTC<int>> myset2 = make_unique<OpenHashSetTC<int>>(myset);
+    unique_ptr<HashSet> myset2 = make_unique<HashSet>(myset);
     endTime = chrono::high_resolution_clock::now();
     cout << chrono::duration_cast<chrono::microseconds>(endTime - startTime).count() << "\n";
 
@@ -98,7 +100,7 @@ int main() {
     myset.write("a_grand_old_set.bin");
 
     startTime = chrono::high_resolution_clock::now();
-    OpenHashSetTC<int> myset3("a_grand_old_set.bin");
+    HashSet myset3("a_grand_old_set.bin");
     endTime = chrono::high_resolution_clock::now();
     cout << "mmap load: " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << "\n";
 

@@ -39,7 +39,7 @@ SOFTWARE.
 
 namespace gradylib {
 
-    template<typename IndexType>
+    template<typename IndexType, typename HashFunction = std::hash<IndexType>>
     class MMapI2SOpenHashMap {
         int64_t const *valueOffsets = nullptr;
         IndexType const * keys = nullptr;
@@ -50,16 +50,12 @@ namespace gradylib {
         int fd = -1;
         void * memoryMapping = nullptr;
         size_t mappingSize = 0;
+        HashFunction hashFunction = HashFunction{};
 
         std::string_view getValue(std::byte const * ptr) const {
             int32_t len = *static_cast<int32_t const *>(static_cast<void const *>(ptr));
             char const * p = static_cast<char const *>(static_cast<void const *>(ptr + 4));
             return std::string_view(p, len);
-        }
-
-        std::byte const * incKeyPtr(std::byte const * keyPtr) const {
-            int32_t len = *static_cast<int32_t const *>(static_cast<void const *>(keyPtr));
-            return keyPtr + 4 + len + (4 - len%4);
         }
 
     public:
@@ -156,7 +152,7 @@ namespace gradylib {
             size_t firstUnsetIdx = -1;
             bool isFirstUnsetIdxSet = false;
 
-            hash = std::hash<IndexType>{}(key);
+            hash = hashFunction(key);
             idx = hash % keySize;
             startIdx = idx;
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
@@ -185,7 +181,10 @@ namespace gradylib {
         }
 
         bool contains(IndexType key) {
-            size_t hash = std::hash<IndexType>{}(key);
+            if (keySize == 0) {
+                return false;
+            }
+            size_t hash = hashFunction(key);
             size_t idx = hash % keySize;
             size_t startIdx = idx;
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
@@ -205,6 +204,63 @@ namespace gradylib {
 
         size_t size() const {
             return mapSize;
+        }
+
+        class iterator {
+            size_t idx;
+            MMapI2SOpenHashMap *container;
+        public:
+            iterator(size_t idx, MMapI2SOpenHashMap *container)
+                    : idx(idx), container(container) {
+            }
+
+            bool operator==(iterator const &other) const {
+                return idx == other.idx && container == other.container;
+            }
+
+            bool operator!=(iterator const &other) const {
+                return idx != other.idx || container != other.container;
+            }
+
+            const std::pair<IndexType const &, std::string_view const> operator*() const {
+                std::byte const *valuePtr = static_cast<std::byte const *>(container->values) + container->valueOffsets[idx];
+                return {container->keys[idx], container->getValue(valuePtr)};
+            }
+
+            IndexType const & key() const {
+                return container->keys[idx];
+            }
+
+            std::string_view const value() const {
+                std::byte const *valuePtr = static_cast<std::byte const *>(container->values) + container->valueOffsets[idx];
+                return container->getValue(valuePtr);
+            }
+
+            iterator &operator++() {
+                if (idx == container->keySize) {
+                    return *this;
+                }
+                ++idx;
+                while (idx < container->keySize && !container->setFlags.isFirstSet(idx)) {
+                    ++idx;
+                }
+                return *this;
+            }
+        };
+
+        iterator begin() {
+            if (mapSize == 0) {
+                return iterator(keySize, this);
+            }
+            size_t idx = 0;
+            while (idx < keySize && !setFlags.isFirstSet(idx)) {
+                ++idx;
+            }
+            return iterator(idx, this);
+        }
+
+        iterator end() {
+            return iterator(keySize, this);
         }
 
         OpenHashMap<IndexType, std::string> clone() const {

@@ -5,10 +5,12 @@ set(CMAKE_CXX_STANDARD 26)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
+set(CMAKE_CXX_FLAGS_PROFILE "-O3 -p")
 
 include_directories(src/)
 
 set(SRC
+        src/AltIntHash.hpp
         src/BitPairSet.hpp
         src/MMapI2SOpenHashMap.hpp
         src/MMapS2IOpenHashMap.hpp
