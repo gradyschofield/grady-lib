@@ -10,6 +10,7 @@ include_directories(src/)
 
 set(SRC
         src/BitPairSet.hpp
+        src/MMapI2SOpenHashMap.hpp
         src/MMapS2IOpenHashMap.hpp
         src/OpenHashMap.hpp
         src/OpenHashMapTC.hpp

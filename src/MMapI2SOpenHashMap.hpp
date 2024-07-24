@@ -22,8 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef GRADY_LIB_MMAPS2IOPENHASHMAP_HPP
-#define GRADY_LIB_MMAPS2IOPENHASHMAP_HPP
+#ifndef GRADY_LIB_MMAPI2SOPENHASHMAP_HPP
+#define GRADY_LIB_MMAPI2SOPENHASHMAP_HPP
 
 #include<fcntl.h>
 #include<sys/mman.h>
@@ -40,10 +40,10 @@ SOFTWARE.
 namespace gradylib {
 
     template<typename IndexType>
-    class MMapS2IOpenHashMap {
-        int64_t const *keyOffsets = nullptr;
-        void const * keys = nullptr;
-        IndexType const * values = nullptr;
+    class MMapI2SOpenHashMap {
+        int64_t const *valueOffsets = nullptr;
+        IndexType const * keys = nullptr;
+        void const * values = nullptr;
         BitPairSet setFlags;
         size_t mapSize = 0;
         size_t keySize = 0;
@@ -51,16 +51,27 @@ namespace gradylib {
         void * memoryMapping = nullptr;
         size_t mappingSize = 0;
 
+        std::string_view getValue(std::byte const * ptr) const {
+            int32_t len = *static_cast<int32_t const *>(static_cast<void const *>(ptr));
+            char const * p = static_cast<char const *>(static_cast<void const *>(ptr + 4));
+            return std::string_view(p, len);
+        }
+
+        std::byte const * incKeyPtr(std::byte const * keyPtr) const {
+            int32_t len = *static_cast<int32_t const *>(static_cast<void const *>(keyPtr));
+            return keyPtr + 4 + len + (4 - len%4);
+        }
+
     public:
-        MMapS2IOpenHashMap() = default;
+        MMapI2SOpenHashMap() = default;
 
-        MMapS2IOpenHashMap(MMapS2IOpenHashMap const &) = delete;
+        MMapI2SOpenHashMap(MMapI2SOpenHashMap const &) = delete;
 
-        MMapS2IOpenHashMap &operator=(MMapS2IOpenHashMap const &) = delete;
+        MMapI2SOpenHashMap &operator=(MMapI2SOpenHashMap const &) = delete;
 
-        MMapS2IOpenHashMap(MMapS2IOpenHashMap &&m) noexcept
+        MMapI2SOpenHashMap(MMapI2SOpenHashMap &&m) noexcept
                 : setFlags(std::move(m.setFlags)) {
-            keyOffsets = m.keyOffsets;
+            valueOffsets = m.valueOffsets;
             keys = m.keys;
             values = m.values;
             mapSize = m.mapSize;
@@ -78,8 +89,8 @@ namespace gradylib {
             m.mappingSize = 0;
         }
 
-        MMapS2IOpenHashMap &operator=(MMapS2IOpenHashMap &&m) noexcept {
-            keyOffsets = m.keyOffsets;
+        MMapI2SOpenHashMap &operator=(MMapI2SOpenHashMap &&m) noexcept {
+            valueOffsets = m.valueOffsets;
             keys = m.keys;
             values = m.values;
             setFlags = std::move(m.setFlags);
@@ -99,10 +110,10 @@ namespace gradylib {
             return *this;
         }
 
-        explicit MMapS2IOpenHashMap(std::string filename) {
+        explicit MMapI2SOpenHashMap(std::string filename) {
             fd = open(filename.c_str(), O_RDONLY);
             if (fd < 0) {
-                std::cout << "Couldn't open " << filename << " in MMapS2IOpenHashMap\n";
+                std::cout << "Couldn't open " << filename << " in MMapI2SOpenHashMap\n";
                 exit(1);
             }
             mappingSize = std::filesystem::file_size(filename);
@@ -117,36 +128,24 @@ namespace gradylib {
             ptr += 8;
             keySize = *static_cast<size_t *>(static_cast<void *>(ptr));
             ptr += 8;
-            size_t valueOffset = *static_cast<size_t *>(static_cast<void *>(ptr));
-            ptr += 8;
             size_t bitPairSetOffset = *static_cast<size_t *>(static_cast<void *>(ptr));
             ptr += 8;
-            keyOffsets = static_cast<int64_t *>(static_cast<void *>(ptr));
+            valueOffsets = static_cast<int64_t *>(static_cast<void *>(ptr));
             ptr += 8 * keySize;
             keys = static_cast<void *>(static_cast<void *>(ptr));
-            values = static_cast<IndexType *>(static_cast<void *>(base + valueOffset));
+            ptr += 8 * keySize;
+            values = static_cast<IndexType *>(static_cast<void *>(ptr));
             setFlags = BitPairSet(static_cast<void *>(base + bitPairSetOffset));
         }
 
-        ~MMapS2IOpenHashMap() {
+        ~MMapI2SOpenHashMap() {
             if (memoryMapping) {
                 munmap(memoryMapping, mappingSize);
                 close(fd);
             }
         }
 
-        std::string_view getKey(std::byte const * ptr) const {
-            int32_t len = *static_cast<int32_t const *>(static_cast<void const *>(ptr));
-            char const * p = static_cast<char const *>(static_cast<void const *>(ptr + 4));
-            return std::string_view(p, len);
-        }
-
-        std::byte const * incKeyPtr(std::byte const * keyPtr) const {
-            int32_t len = *static_cast<int32_t const *>(static_cast<void const *>(keyPtr));
-            return keyPtr + 4 + len + (4 - len%4);
-        }
-
-        IndexType operator[](std::string_view key) const {
+        std::string_view operator[](IndexType key) const {
             if (keySize == 0) {
                 std::cout << key << " not found in map\n";
                 exit(1);
@@ -157,29 +156,25 @@ namespace gradylib {
             size_t firstUnsetIdx = -1;
             bool isFirstUnsetIdxSet = false;
 
-            hash = std::hash<std::string_view>{}(key);
+            hash = std::hash<IndexType>{}(key);
             idx = hash % keySize;
             startIdx = idx;
-            std::byte const *keyPtr = static_cast<std::byte const *>(keys) + keyOffsets[idx];
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
                 if (!isFirstUnsetIdxSet && !isSet) {
                     firstUnsetIdx = idx;
                     isFirstUnsetIdxSet = true;
                 }
-                std::string_view k = getKey(keyPtr);
+                IndexType k = keys[idx];
                 if (isSet && k == key) {
-                    return values[idx];
+                    std::byte const *valuePtr = static_cast<std::byte const *>(values) + valueOffsets[idx];
+                    return getValue(valuePtr);
                 }
                 if (wasSet && k == key) {
                     std::cout << key << " not found in map\n";
                     exit(1);
                 }
-                keyPtr = incKeyPtr(keyPtr);
                 ++idx;
-                if (idx == keySize) {
-                    idx = 0;
-                    keyPtr = static_cast<std::byte const *>(keys);
-                }
+                idx = idx == keySize ? 0 : idx;
                 if (startIdx == idx) {
                     std::cout << key << " not found in map\n";
                     exit(1);
@@ -189,25 +184,20 @@ namespace gradylib {
             exit(1);
         }
 
-        bool contains(std::string_view key) {
-            size_t hash = std::hash<std::string_view>{}(key);
+        bool contains(IndexType key) {
+            size_t hash = std::hash<IndexType>{}(key);
             size_t idx = hash % keySize;
             size_t startIdx = idx;
-            std::byte const *keyPtr = static_cast<std::byte const *>(keys) + keyOffsets[idx];
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
-                std::string_view k = getKey(keyPtr);
+                IndexType k = keys[idx];
                 if (isSet && k == key) {
                     return true;
                 }
                 if (wasSet && k == key) {
                     return false;
                 }
-                keyPtr = incKeyPtr(keyPtr);
                 ++idx;
-                if (idx == keySize) {
-                    idx = 0;
-                    keyPtr = static_cast<std::byte const *>(keys);
-                }
+                idx = idx == keySize ? 0 : idx;
                 if (startIdx == idx) break;
             }
             return false;
@@ -217,7 +207,7 @@ namespace gradylib {
             return mapSize;
         }
 
-        OpenHashMap<std::string, IndexType> clone() const {
+        OpenHashMap<IndexType, std::string> clone() const {
 
         }
     };

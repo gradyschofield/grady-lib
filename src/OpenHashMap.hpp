@@ -322,6 +322,43 @@ namespace gradylib {
         ofs.seekp(bitPairSetOffsetWritePos, std::ios::beg);
         ofs.write(static_cast<char*>(static_cast<void*>(&bitPairSetOffset)), 8);
     }
+
+    template<typename IndexType>
+    void writeMappable(std::string filename, OpenHashMap<IndexType, std::string> const & m) {
+        std::ofstream ofs(filename);
+        if (ofs.fail()) {
+            std::cout << "Couldn't open file " << filename << " in writeMappable.\n";
+            exit(1);
+        }
+        size_t mapSize = m.mapSize;
+        ofs.write(static_cast<char*>(static_cast<void*>(&mapSize)), 8);
+        size_t keySize = m.keys.size();
+        ofs.write(static_cast<char*>(static_cast<void*>(&keySize)), 8);
+        size_t bitPairSetOffset = 0;
+        auto const bitPairSetOffsetWritePos = ofs.tellp();
+        ofs.write(static_cast<char*>(static_cast<void*>(&bitPairSetOffset)), 8);
+        size_t valueOffset = 0;
+        for (size_t i = 0; i < keySize; ++i) {
+            ofs.write(static_cast<char*>(static_cast<void*>(&valueOffset)), 8);
+            int32_t strLen = m.values[i].length();
+            int32_t strSize = 4 + strLen + (4 - strLen % 4);
+            valueOffset += strSize;
+        }
+        ofs.write(static_cast<char*>(const_cast<void*>(static_cast<void const *>(m.keys.data()))), sizeof(IndexType) * keySize);
+        std::vector<char> pad(4, 0);
+        for (size_t i = 0; i < keySize; ++i) {
+            int32_t len = m.values[i].length();
+            ofs.write(static_cast<char*>(static_cast<void*>(&len)), 4);
+            ofs.write(m.values[i].data(), len);
+            ofs.write(pad.data(), 4 - len % 4);
+        }
+
+        bitPairSetOffset = ofs.tellp();
+        m.setFlags.write(ofs);
+
+        ofs.seekp(bitPairSetOffsetWritePos, std::ios::beg);
+        ofs.write(static_cast<char*>(static_cast<void*>(&bitPairSetOffset)), 8);
+    }
 }
 
 #endif //GRADY_LIB_OPENHASHMAP_HPP
