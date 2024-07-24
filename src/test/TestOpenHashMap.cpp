@@ -21,7 +21,7 @@ string randString() {
 }
 
 int main(int argc, char ** argv) {
-    long mapSize = 1E8;
+    long mapSize = 1E6;
     gradylib::OpenHashMap<string, long> map;
     map.reserve(mapSize);
     vector<string> strs;
@@ -79,6 +79,13 @@ int main(int argc, char ** argv) {
     }
     endTime = chrono::high_resolution_clock::now();
     cout << "MMapS2IOpenHashMap check " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << " ms\n";
+
+    int num = 0;
+    for (auto [str, idx] : map2) {
+        cout << str << " " << idx << "\n";
+        ++num;
+        if (num == 20) break;
+    }
 
     return 0;
 }

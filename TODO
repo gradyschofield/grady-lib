@@ -1,5 +1,4 @@
 Implement begin/end in MMapI2SOpenHashMap
-Implement begin/end in MMapS2IOpenHashMap
 Rework OpenHashMapTC for mmap load
 Remove the exits and return optionals or throw exceptions
 Implement COW for mmap'd OpenHashSetTC

@@ -217,6 +217,63 @@ namespace gradylib {
             return mapSize;
         }
 
+        class iterator {
+            size_t idx;
+            MMapS2IOpenHashMap *container;
+        public:
+            iterator(size_t idx, MMapS2IOpenHashMap *container)
+                    : idx(idx), container(container) {
+            }
+
+            bool operator==(iterator const &other) const {
+                return idx == other.idx && container == other.container;
+            }
+
+            bool operator!=(iterator const &other) const {
+                return idx != other.idx || container != other.container;
+            }
+
+            const std::pair<std::string_view const, IndexType const &> operator*() const {
+                std::byte const *keyPtr = static_cast<std::byte const *>(container->keys) + container->keyOffsets[idx];
+                return {container->getKey(keyPtr), container->values[idx]};
+            }
+
+            std::string_view const key() const {
+                std::byte const *keyPtr = static_cast<std::byte const *>(container->keys) + container->keyOffsets[idx];
+                return container->getKey(keyPtr);
+            }
+
+            IndexType &value() {
+                return container->values[idx];
+            }
+
+            iterator &operator++() {
+                if (idx == container->keySize) {
+                    return *this;
+                }
+                ++idx;
+                while (idx < container->keySize && !container->setFlags.isFirstSet(idx)) {
+                    ++idx;
+                }
+                return *this;
+            }
+        };
+
+        iterator begin() {
+            if (mapSize == 0) {
+                return iterator(keySize, this);
+            }
+            size_t idx = 0;
+            while (idx < keySize && !setFlags.isFirstSet(idx)) {
+                ++idx;
+            }
+            return iterator(idx, this);
+        }
+
+        iterator end() {
+            return iterator(keySize, this);
+        }
+
         OpenHashMap<std::string, IndexType> clone() const {
 
         }

@@ -7,6 +7,7 @@
 #include<OpenHashMapTC.hpp>
 
 using namespace std;
+using namespace gradylib;
 
 int main(int argc, char ** argv) {
     OpenHashMapTC<int64_t, int32_t> m;

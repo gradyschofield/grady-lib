@@ -297,11 +297,11 @@ namespace gradylib {
             }
 
             bool operator==(iterator const &other) const {
-                return idx == other.idx;
+                return idx == other.idx && container == other.container;
             }
 
             bool operator!=(iterator const &other) const {
-                return idx != other.idx;
+                return idx != other.idx || container != other.container;
             }
 
             Key const &operator*() const {
