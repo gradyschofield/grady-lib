@@ -10,9 +10,11 @@ include_directories(src/)
 
 set(SRC
         src/BitPairSet.hpp
-        src/OpenHashSetTC.hpp
+        src/MMapS2IOpenHashMap.hpp
         src/OpenHashMap.hpp
-        src/OpenHashMapTC.hpp)
+        src/OpenHashMapTC.hpp
+        src/OpenHashSetTC.hpp
+)
 
 add_executable(testOpenHashSet ${SRC} src/main.cpp)
 add_executable(testOpenHashMapTC ${SRC} src/test/TestOpenHashMapTC.cpp)

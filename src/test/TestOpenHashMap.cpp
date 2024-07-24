@@ -7,6 +7,7 @@
 #include<unordered_map>
 
 #include<OpenHashMap.hpp>
+#include<MMapS2IOpenHashMap.hpp>
 
 using namespace std;
 
@@ -20,8 +21,8 @@ string randString() {
 }
 
 int main(int argc, char ** argv) {
-    long mapSize = 1E9;
-    OpenHashMap<string, long> map;
+    long mapSize = 1E7;
+    gradylib::OpenHashMap<string, long> map;
     map.reserve(mapSize);
     vector<string> strs;
     strs.reserve(mapSize);
@@ -57,6 +58,10 @@ int main(int argc, char ** argv) {
     if (test.size() != map.size()) {
         cout << "size problem";
     }
+
+    gradylib::writeMappable("stringmap.bin", map);
+
+    gradylib::MMapS2IOpenHashMap<long> map2("stringmap.bin");
 
     return 0;
 }
