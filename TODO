@@ -1,4 +1,5 @@
-MMapI2HRSOpenHashMap - int to high redundancy strings
+MMapI2HRSOpenHashMap
+    - copy/move constructors/assignments
 Fix exception correctness throughout
 Remove the exits and return optionals or throw exceptions
 Implement COW for mmap'd OpenHashSetTC

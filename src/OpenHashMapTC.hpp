@@ -93,6 +93,29 @@ namespace gradylib {
             std::swap(setFlags, newSetFlags);
         }
 
+        void setFromMemoryMapping(void *startPtr) {
+            readOnly = true;
+            std::byte *ptr = static_cast<std::byte *>(startPtr);
+            std::byte *base = ptr;
+            mapSize = *static_cast<size_t*>(static_cast<void*>(ptr));
+            ptr += 8;
+            keySize = *static_cast<size_t*>(static_cast<void*>(ptr));
+            ptr += 8;
+            loadFactor = *static_cast<double*>(static_cast<void*>(ptr));
+            ptr += 8;
+            growthFactor = *static_cast<double*>(static_cast<void*>(ptr));
+            ptr += 8;
+            size_t valueOffset = *static_cast<size_t*>(static_cast<void*>(ptr));
+            ptr += 8;
+            size_t bitPairSetOffset = *static_cast<size_t*>(static_cast<void*>(ptr));
+            ptr += 8;
+            keys = static_cast<Key*>(static_cast<void*>(ptr));
+            ptr = base + valueOffset;
+            values = static_cast<Value*>(static_cast<void*>(ptr));
+            ptr = base + bitPairSetOffset;
+            setFlags = BitPairSet(ptr);
+        }
+
     public:
 
         OpenHashMapTC() = default;
@@ -175,7 +198,7 @@ namespace gradylib {
             if (memoryMapping) {
                 munmap(memoryMapping, mappingSize);
                 close(fd);
-            } else {
+            } else if (!readOnly) {
                 delete [] keys;
                 delete [] values;
             }
@@ -193,26 +216,11 @@ namespace gradylib {
                 std::cout << "memory map failed: " << strerror(errno) << "\n";
                 exit(1);
             }
-            readOnly = true;
-            std::byte *ptr = static_cast<std::byte *>(memoryMapping);
-            std::byte *base = ptr;
-            mapSize = *static_cast<size_t*>(static_cast<void*>(ptr));
-            ptr += 8;
-            keySize = *static_cast<size_t*>(static_cast<void*>(ptr));
-            ptr += 8;
-            loadFactor = *static_cast<double*>(static_cast<void*>(ptr));
-            ptr += 8;
-            growthFactor = *static_cast<double*>(static_cast<void*>(ptr));
-            ptr += 8;
-            size_t valueOffset = *static_cast<size_t*>(static_cast<void*>(ptr));
-            ptr += 8;
-            size_t bitPairSetOffset = *static_cast<size_t*>(static_cast<void*>(ptr));
-            ptr += 8;
-            keys = static_cast<Key*>(static_cast<void*>(ptr));
-            ptr = base + valueOffset;
-            values = static_cast<Value*>(static_cast<void*>(ptr));
-            ptr = base + bitPairSetOffset;
-            setFlags = BitPairSet(ptr);
+            setFromMemoryMapping(memoryMapping);
+        }
+
+        explicit OpenHashMapTC(void * startPtr) {
+            setFromMemoryMapping(startPtr);
         }
 
         Value &operator[](Key const &key) {
@@ -455,16 +463,25 @@ namespace gradylib {
         }
 
 
-        void write(std::string filename, int alignment = alignof(void*)) {
+        void write(std::string filename, int alignment = alignof(void*)) const {
             std::ofstream ofs(filename, std::ios::binary);
             if (ofs.fail()) {
                 std::cout << "Couldn't open " << filename << " for writing in OpenHashMapTC::write\n";
                 exit(1);
             }
-            ofs.write(static_cast<char*>(static_cast<void*>(&mapSize)), 8);
-            ofs.write(static_cast<char*>(static_cast<void*>(&keySize)), 8);
-            ofs.write(static_cast<char*>(static_cast<void*>(&loadFactor)), 8);
-            ofs.write(static_cast<char*>(static_cast<void*>(&growthFactor)), 8);
+            write(ofs, alignment);
+        }
+
+        void write(std::ofstream & ofs, int alignment = alignof(void*)) const {
+            size_t t;
+            t = mapSize;
+            ofs.write(static_cast<char*>(static_cast<void *>(&t)), 8);
+            t = keySize;
+            ofs.write(static_cast<char*>(static_cast<void *>(&t)), 8);
+            double d = loadFactor;
+            ofs.write(static_cast<char*>(static_cast<void *>(&d)), 8);
+            d = growthFactor;
+            ofs.write(static_cast<char*>(static_cast<void *>(&d)), 8);
             size_t valuesOffset = 0;
             size_t bitPairSetOffset = 0;
             auto valueOffsetPos = ofs.tellp();
