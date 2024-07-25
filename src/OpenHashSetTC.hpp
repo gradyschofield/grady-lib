@@ -201,6 +201,10 @@ namespace gradylib {
         }
 
         void insert(Key const &key) {
+            if (readOnly) {
+                std::cout << "Cannot modify mmap\n";
+                exit(1);
+            }
             size_t hash;
             size_t idx;
             size_t startIdx;
@@ -270,6 +274,10 @@ namespace gradylib {
         }
 
         void erase(Key const &key) {
+            if (readOnly) {
+                std::cout << "Cannot modify mmap\n";
+                exit(1);
+            }
             size_t hash = hashFunction(key);
             size_t idx = hash % keySize;
             size_t startIdx = idx;
@@ -288,6 +296,10 @@ namespace gradylib {
         }
 
         void reserve(size_t size) {
+            if (readOnly) {
+                std::cout << "Cannot modify mmap\n";
+                exit(1);
+            }
             rehash(size);
         }
 
@@ -354,7 +366,7 @@ namespace gradylib {
          * 8 underlying array size
          * 4 * underlying array size
          */
-        void write(std::string filename) {
+        void write(std::string filename, int alignment = alignof(void*)) {
             std::ofstream ofs(filename, std::ios::binary);
             ofs.write((char *) &setSize, 8);
             ofs.write((char *) &keySize, 8);

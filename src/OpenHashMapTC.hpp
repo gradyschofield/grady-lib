@@ -55,6 +55,7 @@ namespace gradylib {
         size_t mappingSize = 0;
         HashFunction hashFunction = HashFunction{};
         BitPairSet setFlags;
+        bool readOnly = false;
 
         void rehash(size_t size = 0) {
             size_t newSize;
@@ -113,7 +114,8 @@ namespace gradylib {
         OpenHashMapTC(OpenHashMapTC && m) noexcept
             : keys(m.keys), values(m.values), keySize(m.keySize), mapSize(m.mapSize),
             loadFactor(m.loadFactor), growthFactor(m.growthFactor), fd(m.fd),
-            memoryMapping(m.memoryMapping), mappingSize(m.mappingSize), setFlags(std::move(m.setFlags))
+            memoryMapping(m.memoryMapping), mappingSize(m.mappingSize), setFlags(std::move(m.setFlags)),
+            readOnly(m.readOnly)
         {
             m.keys = nullptr;
             m.values = nullptr;
@@ -122,6 +124,7 @@ namespace gradylib {
             m.fd = -1;
             m.memoryMapping = nullptr;
             m.mappingSize = 0;
+            m.readOnly = false;
         }
 
         OpenHashMapTC & operator=(OpenHashMapTC const & m) {
@@ -156,6 +159,7 @@ namespace gradylib {
             memoryMapping = m.memoryMapping;
             mappingSize = m.mappingSize;
             setFlags = std::move(m.setFlags);
+            readOnly = m.readOnly;
             m.keys = nullptr;
             m.values = nullptr;
             m.keySize = 0;
@@ -163,6 +167,7 @@ namespace gradylib {
             m.fd = -1;
             m.memoryMapping = nullptr;
             m.mappingSize = 0;
+            m.readOnly = false;
             return *this;
         }
 
@@ -188,11 +193,33 @@ namespace gradylib {
                 std::cout << "memory map failed: " << strerror(errno) << "\n";
                 exit(1);
             }
+            readOnly = true;
             std::byte *ptr = static_cast<std::byte *>(memoryMapping);
-
+            std::byte *base = ptr;
+            mapSize = *static_cast<size_t*>(static_cast<void*>(ptr));
+            ptr += 8;
+            keySize = *static_cast<size_t*>(static_cast<void*>(ptr));
+            ptr += 8;
+            loadFactor = *static_cast<double*>(static_cast<void*>(ptr));
+            ptr += 8;
+            growthFactor = *static_cast<double*>(static_cast<void*>(ptr));
+            ptr += 8;
+            size_t valueOffset = *static_cast<size_t*>(static_cast<void*>(ptr));
+            ptr += 8;
+            size_t bitPairSetOffset = *static_cast<size_t*>(static_cast<void*>(ptr));
+            ptr += 8;
+            keys = static_cast<Key*>(static_cast<void*>(ptr));
+            ptr = base + valueOffset;
+            values = static_cast<Value*>(static_cast<void*>(ptr));
+            ptr = base + bitPairSetOffset;
+            setFlags = BitPairSet(ptr);
         }
 
         Value &operator[](Key const &key) {
+            if (readOnly) {
+                std::cout << "Cannot modify mmap\n";
+                exit(1);
+            }
             size_t hash;
             size_t idx;
             size_t startIdx;
@@ -238,6 +265,10 @@ namespace gradylib {
         }
 
         void emplace(Key const &key, Value const &value) {
+            if (readOnly) {
+                std::cout << "Cannot modify mmap\n";
+                exit(1);
+            }
             size_t hash = 0;
             size_t idx = 0;
             bool doesContain = false;
@@ -288,7 +319,31 @@ namespace gradylib {
             ++mapSize;
         }
 
-        bool contains(Key const &key) {
+        Value const & at(Key const &key) const {
+            if (keySize == 0) {
+                std::cout << "key not found in map\n";
+                exit(1);
+            }
+            size_t hash = hashFunction(key);
+            size_t idx = hash % keySize;
+            size_t startIdx = idx;
+            for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
+                if (isSet && keys[idx] == key) {
+                    return values[idx];
+                }
+                if (wasSet && keys[idx] == key) {
+                    std::cout << "key not found in map\n";
+                    exit(1);
+                }
+                ++idx;
+                idx = idx == keySize ? 0 : idx;
+                if (startIdx == idx) break;
+            }
+            std::cout << "key not found in map\n";
+            exit(1);
+        }
+
+        bool contains(Key const &key) const {
             if (keySize == 0) {
                 return false;
             }
@@ -310,6 +365,10 @@ namespace gradylib {
         }
 
         void erase(Key const &key) {
+            if (readOnly) {
+                std::cout << "Cannot modify mmap\n";
+                exit(1);
+            }
             size_t hash = hashFunction(key);
             size_t idx = hash % keySize;
             size_t startIdx = idx;
@@ -329,6 +388,10 @@ namespace gradylib {
         }
 
         void reserve(size_t size) {
+            if (readOnly) {
+                std::cout << "Cannot modify mmap\n";
+                exit(1);
+            }
             rehash(size);
         }
 
@@ -392,7 +455,7 @@ namespace gradylib {
         }
 
 
-        void write(std::string filename) {
+        void write(std::string filename, int alignment = alignof(void*)) {
             std::ofstream ofs(filename, std::ios::binary);
             if (ofs.fail()) {
                 std::cout << "Couldn't open " << filename << " for writing in OpenHashMapTC::write\n";
@@ -402,13 +465,33 @@ namespace gradylib {
             ofs.write(static_cast<char*>(static_cast<void*>(&keySize)), 8);
             ofs.write(static_cast<char*>(static_cast<void*>(&loadFactor)), 8);
             ofs.write(static_cast<char*>(static_cast<void*>(&growthFactor)), 8);
-            size_t valuesOffset;
-            size_t bitPairSetOffset;
-            int valuePad = 0;
-            int bitPairSetOffsetPad = 0;
+            size_t valuesOffset = 0;
+            size_t bitPairSetOffset = 0;
+            auto valueOffsetPos = ofs.tellp();
+            ofs.write(static_cast<char*>(static_cast<void*>(&valuesOffset)), 8);
+            auto bitPairSetOffsetPos = ofs.tellp();
+            ofs.write(static_cast<char*>(static_cast<void*>(&bitPairSetOffset)), 8);
             ofs.write(static_cast<char*>(static_cast<void*>(keys)), sizeof(Key) * keySize);
+            int valuePad = alignment - ofs.tellp() % alignment;
+            for (int i = 0; i < valuePad; ++i) {
+                char t = 0;
+                ofs.write(&t, 1);
+            }
+            valuesOffset = ofs.tellp();
             ofs.write(static_cast<char*>(static_cast<void*>(values)), sizeof(Value) * keySize);
+            int bitPairSetOffsetPad = alignment - ofs.tellp() % alignment;
+            for (int i = 0; i < bitPairSetOffsetPad; ++i) {
+                char t = 0;
+                ofs.write(&t, 1);
+            }
+            bitPairSetOffset = ofs.tellp();
             setFlags.write(ofs);
+
+            ofs.seekp(valueOffsetPos);
+            ofs.write(static_cast<char*>(static_cast<void*>(&valuesOffset)), 8);
+
+            ofs.seekp(bitPairSetOffsetPos);
+            ofs.write(static_cast<char*>(static_cast<void*>(&bitPairSetOffset)), 8);
         }
     };
 }

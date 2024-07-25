@@ -1,6 +1,3 @@
-Rework OpenHashMapTC for mmap load
-    - finish write/constructor
-    - add readonly flag
 MMapI2HRSOpenHashMap - int to high redundancy strings
 Fix exception correctness throughout
 Remove the exits and return optionals or throw exceptions
