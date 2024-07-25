@@ -25,6 +25,10 @@ SOFTWARE.
 #ifndef GRADY_LIB_OPENHASHMAPTC_HPP
 #define GRADY_LIB_OPENHASHMAPTC_HPP
 
+#include<fcntl.h>
+#include<sys/mman.h>
+#include<unistd.h>
+
 #include<fstream>
 #include<memory>
 #include<type_traits>
@@ -33,6 +37,7 @@ SOFTWARE.
 #include<BitPairSet.hpp>
 
 namespace gradylib {
+
     template<typename Key, typename Value, typename HashFunction = std::hash<Key>>
     requires std::is_trivially_copyable_v<Key> &&
              std::is_trivially_copyable_v<Value> &&
@@ -45,6 +50,9 @@ namespace gradylib {
         size_t keySize = 0;
         double loadFactor = 0.8;
         double growthFactor = 1.2;
+        int fd = -1;
+        void * memoryMapping = nullptr;
+        size_t mappingSize = 0;
         HashFunction hashFunction = HashFunction{};
         BitPairSet setFlags;
 
@@ -104,12 +112,16 @@ namespace gradylib {
 
         OpenHashMapTC(OpenHashMapTC && m) noexcept
             : keys(m.keys), values(m.values), keySize(m.keySize), mapSize(m.mapSize),
-            loadFactor(m.loadFactor), growthFactor(m.growthFactor), setFlags(std::move(m.setFlags))
+            loadFactor(m.loadFactor), growthFactor(m.growthFactor), fd(m.fd),
+            memoryMapping(m.memoryMapping), mappingSize(m.mappingSize), setFlags(std::move(m.setFlags))
         {
             m.keys = nullptr;
             m.values = nullptr;
             m.keySize = 0;
             m.mapSize = 0;
+            m.fd = -1;
+            m.memoryMapping = nullptr;
+            m.mappingSize = 0;
         }
 
         OpenHashMapTC & operator=(OpenHashMapTC const & m) {
@@ -140,15 +152,43 @@ namespace gradylib {
             mapSize = m.mapSize;
             loadFactor = m.loadFactor;
             growthFactor = m.growthFactor;
+            fd = m.fd;
+            memoryMapping = m.memoryMapping;
+            mappingSize = m.mappingSize;
             setFlags = std::move(m.setFlags);
             m.keys = nullptr;
             m.values = nullptr;
             m.keySize = 0;
             m.mapSize = 0;
+            m.fd = -1;
+            m.memoryMapping = nullptr;
+            m.mappingSize = 0;
             return *this;
         }
 
+        ~OpenHashMapTC() {
+            if (memoryMapping) {
+                munmap(memoryMapping, mappingSize);
+                close(fd);
+            } else {
+                delete [] keys;
+                delete [] values;
+            }
+        }
+
         explicit OpenHashMapTC(std::string filename) {
+            fd = open(filename.c_str(), O_RDONLY);
+            if (fd < 0) {
+                std::cout << "Error opening file " << filename << "\n";
+                exit(1);
+            }
+            mappingSize = std::filesystem::file_size(filename);
+            memoryMapping = mmap(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
+            if (memoryMapping == MAP_FAILED) {
+                std::cout << "memory map failed: " << strerror(errno) << "\n";
+                exit(1);
+            }
+            std::byte *ptr = static_cast<std::byte *>(memoryMapping);
 
         }
 
@@ -362,6 +402,10 @@ namespace gradylib {
             ofs.write(static_cast<char*>(static_cast<void*>(&keySize)), 8);
             ofs.write(static_cast<char*>(static_cast<void*>(&loadFactor)), 8);
             ofs.write(static_cast<char*>(static_cast<void*>(&growthFactor)), 8);
+            size_t valuesOffset;
+            size_t bitPairSetOffset;
+            int valuePad = 0;
+            int bitPairSetOffsetPad = 0;
             ofs.write(static_cast<char*>(static_cast<void*>(keys)), sizeof(Key) * keySize);
             ofs.write(static_cast<char*>(static_cast<void*>(values)), sizeof(Value) * keySize);
             setFlags.write(ofs);

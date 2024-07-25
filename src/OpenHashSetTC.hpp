@@ -61,6 +61,7 @@ SOFTWARE.
 #include<BitPairSet.hpp>
 
 namespace gradylib {
+
     template<typename Key, typename HashFunction = std::hash<Key>>
     requires std::is_trivially_copyable_v<Key> && std::is_default_constructible_v<Key>
     class OpenHashSetTC {
@@ -361,19 +362,20 @@ namespace gradylib {
             ofs.write((char *) &growthFactor, 8);
             size_t keyArraySize = sizeof(Key) * keySize;
             size_t bitPairSetOffset = ofs.tellp();
-            bool writePad;
+            int padLength = 0;
             if (keyArraySize % 8 == 0) {
                 bitPairSetOffset += 8 + keyArraySize;
-                writePad = false;
             } else {
-                bitPairSetOffset += 12 + keyArraySize;
-                writePad = true;
+                padLength = 8 - keyArraySize % 8;
+                bitPairSetOffset += 8 + keyArraySize + padLength;
             }
             ofs.write((char *) &bitPairSetOffset, 8);
             ofs.write((char *) keys, sizeof(Key) * keySize);
-            if (writePad) {
-                int32_t x = 0;
-                ofs.write((char *) &x, 4);
+            if (padLength > 0) {
+                for (int i = 0; i < padLength; ++i) {
+                    char pad = 0;
+                    ofs.write((char *) &pad, 1);
+                }
             }
             setFlags.write(ofs);
         }

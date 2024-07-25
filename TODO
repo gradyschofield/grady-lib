@@ -1,4 +1,6 @@
 Rework OpenHashMapTC for mmap load
+    - finish write/constructor
+    - add readonly flag
 MMapI2HRSOpenHashMap - int to high redundancy strings
 Fix exception correctness throughout
 Remove the exits and return optionals or throw exceptions
@@ -6,3 +8,4 @@ Implement COW for mmap'd OpenHashSetTC
 Implement COW for mmap'd OpenHashMapTC
 Implement clone in MMapI2sOpenHashMap
 Implement clone in MMapS2IOpenHashMap
+Remove AltIntHash
