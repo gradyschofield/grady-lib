@@ -23,7 +23,7 @@ string randString() {
 }
 
 int main(int argc, char ** argv) {
-    long mapSize = 1E6;
+    long mapSize = 1E8;
     gradylib::OpenHashMap<string, long> map;
     map.reserve(mapSize);
     vector<string> strs;

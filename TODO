@@ -1,4 +1,6 @@
 Rework OpenHashMapTC for mmap load
+MMapI2HRSOpenHashMap - int to high redundancy strings
+Fix exception correctness throughout
 Remove the exits and return optionals or throw exceptions
 Implement COW for mmap'd OpenHashSetTC
 Implement COW for mmap'd OpenHashMapTC

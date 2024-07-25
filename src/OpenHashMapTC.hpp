@@ -25,6 +25,8 @@ SOFTWARE.
 #ifndef GRADY_LIB_OPENHASHMAPTC_HPP
 #define GRADY_LIB_OPENHASHMAPTC_HPP
 
+#include<fstream>
+#include<memory>
 #include<type_traits>
 #include<vector>
 
@@ -37,13 +39,14 @@ namespace gradylib {
              std::is_default_constructible_v<Key> &&
              std::is_default_constructible_v<Value>
     class OpenHashMapTC {
-        std::vector<Key> keys;
-        std::vector<Value> values;
-        BitPairSet setFlags;
+        Key * keys = nullptr;
+        Value * values = nullptr;
+        size_t mapSize = 0;
+        size_t keySize = 0;
         double loadFactor = 0.8;
         double growthFactor = 1.2;
-        size_t mapSize = 0;
         HashFunction hashFunction = HashFunction{};
+        BitPairSet setFlags;
 
         void rehash(size_t size = 0) {
             size_t newSize;
@@ -53,32 +56,101 @@ namespace gradylib {
                 }
                 newSize = size / loadFactor;
             } else {
-                newSize = std::max<size_t>(keys.size() + 1, std::max<size_t>(1, keys.size()) * growthFactor);
+                newSize = std::max<size_t>(keySize + 1, std::max<size_t>(1, keySize) * growthFactor);
             }
-            std::vector<Key> newKeys(newSize);
-            std::vector<Value> newValues(newSize);
+            Key * newKeys = new Key[newSize];
+            Value * newValues = new Value[newSize];
             BitPairSet newSetFlags(newSize);
-            for (size_t i = 0; i < keys.size(); ++i) {
+            for (size_t i = 0; i < keySize; ++i) {
                 if (!setFlags.isFirstSet(i)) {
                     continue;
                 }
                 Key const &k = keys[i];
                 size_t hash = hashFunction(k);
-                size_t idx = hash % newKeys.size();
+                size_t idx = hash % newSize;
                 while (newSetFlags.isFirstSet(idx)) {
                     ++idx;
-                    idx = idx == newKeys.size() ? 0 : idx;
+                    idx = idx == newSize ? 0 : idx;
                 }
                 newSetFlags.setBoth(idx);
                 newKeys[idx] = k;
                 newValues[idx] = values[i];
             }
-            std::swap(keys, newKeys);
-            std::swap(values, newValues);
+            delete [] keys;
+            keys = newKeys;
+            keySize = newSize;
+            delete [] values;
+            values = newValues;
             std::swap(setFlags, newSetFlags);
         }
 
     public:
+
+        OpenHashMapTC() = default;
+
+        OpenHashMapTC(OpenHashMapTC const & m) {
+            BitPairSet tmpSetFlags = m.setFlags;
+            std::unique_ptr<Key[]> tmpKeys = new Key[m.keySize];
+            values = new Value[m.keySize];
+            keys = tmpKeys.release();
+            std::swap(setFlags, tmpSetFlags);
+            keySize = m.keySize;
+            mapSize = m.mapSize;
+            loadFactor = m.loadFactor;
+            growthFactor = m.growthFactor;
+            memcpy(keys, m.keys, sizeof(Key) * keySize);
+            memcpy(values, m.values, sizeof(Value) * keySize);
+        }
+
+        OpenHashMapTC(OpenHashMapTC && m) noexcept
+            : keys(m.keys), values(m.values), keySize(m.keySize), mapSize(m.mapSize),
+            loadFactor(m.loadFactor), growthFactor(m.growthFactor), setFlags(std::move(m.setFlags))
+        {
+            m.keys = nullptr;
+            m.values = nullptr;
+            m.keySize = 0;
+            m.mapSize = 0;
+        }
+
+        OpenHashMapTC & operator=(OpenHashMapTC const & m) {
+            if (this == &m) {
+                return *this;
+            }
+            BitPairSet tmpSetFlags = m.setFlags;
+            std::unique_ptr<Key[]> tmpKeys = new Key[m.keySize];
+            values = new Value[m.keySize];
+            keys = tmpKeys.release();
+            std::swap(setFlags, tmpSetFlags);
+            keySize = m.keySize;
+            mapSize = m.mapSize;
+            loadFactor = m.loadFactor;
+            growthFactor = m.growthFactor;
+            memcpy(keys, m.keys, sizeof(Key) * keySize);
+            memcpy(values, m.values, sizeof(Value) * keySize);
+            return *this;
+        }
+
+        OpenHashMapTC & operator=(OpenHashMapTC && m) noexcept {
+            if (this == &m) {
+                return *this;
+            }
+            keys = m.keys;
+            values = m.values;
+            keySize = m.keySize;
+            mapSize = m.mapSize;
+            loadFactor = m.loadFactor;
+            growthFactor = m.growthFactor;
+            setFlags = std::move(m.setFlags);
+            m.keys = nullptr;
+            m.values = nullptr;
+            m.keySize = 0;
+            m.mapSize = 0;
+            return *this;
+        }
+
+        explicit OpenHashMapTC(std::string filename) {
+
+        }
 
         Value &operator[](Key const &key) {
             size_t hash;
@@ -86,9 +158,9 @@ namespace gradylib {
             size_t startIdx;
             size_t firstUnsetIdx = -1;
             bool isFirstUnsetIdxSet = false;
-            if (!keys.empty()) {
+            if (keySize > 0) {
                 hash = hashFunction(key);
-                idx = hash % keys.size();
+                idx = hash % keySize;
                 startIdx = idx;
                 for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
                     if (!isFirstUnsetIdxSet && !isSet) {
@@ -102,18 +174,18 @@ namespace gradylib {
                         break;
                     }
                     ++idx;
-                    idx = idx == keys.size() ? 0 : idx;
+                    idx = idx == keySize ? 0 : idx;
                     if (startIdx == idx) break;
                 }
             }
-            if (mapSize >= keys.size() * loadFactor) {
+            if (mapSize >= keySize * loadFactor) {
                 rehash();
                 hash = hashFunction(key);
-                idx = hash % keys.size();
+                idx = hash % keySize;
                 startIdx = idx;
                 while (setFlags.isFirstSet(idx)) {
                     ++idx;
-                    idx = idx == keys.size() ? 0 : idx;
+                    idx = idx == keySize ? 0 : idx;
                     if (startIdx == idx) break;
                 }
             } else {
@@ -132,9 +204,9 @@ namespace gradylib {
             size_t firstUnsetIdx = -1;
             bool isFirstUnsetIdxSet = false;
             size_t startIdx = idx;
-            if (keys.size() > 0) {
+            if (keySize > 0) {
                 hash = hashFunction(key);
-                idx = hash % keys.size();
+                idx = hash % keySize;
                 for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
                     if (!isFirstUnsetIdxSet && !isSet) {
                         firstUnsetIdx = idx;
@@ -150,21 +222,21 @@ namespace gradylib {
                         break;
                     }
                     ++idx;
-                    idx = idx == keys.size() ? 0 : idx;
+                    idx = idx == keySize ? 0 : idx;
                     if (startIdx == idx) break;
                 }
             }
             if (doesContain) {
                 return;
             }
-            if (mapSize >= keys.size() * loadFactor) {
+            if (mapSize >= keySize * loadFactor) {
                 rehash();
                 hash = hashFunction(key);
-                idx = hash % keys.size();
+                idx = hash % keySize;
                 startIdx = idx;
                 while (setFlags.isFirstSet(idx)) {
                     ++idx;
-                    idx = idx == keys.size() ? 0 : idx;
+                    idx = idx == keySize ? 0 : idx;
                     if (startIdx == idx) break;
                 }
             } else {
@@ -177,11 +249,11 @@ namespace gradylib {
         }
 
         bool contains(Key const &key) {
-            if (keys.empty()) {
+            if (keySize == 0) {
                 return false;
             }
             size_t hash = hashFunction(key);
-            size_t idx = hash % keys.size();
+            size_t idx = hash % keySize;
             size_t startIdx = idx;
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
                 if (isSet && keys[idx] == key) {
@@ -191,7 +263,7 @@ namespace gradylib {
                     return false;
                 }
                 ++idx;
-                idx = idx == keys.size() ? 0 : idx;
+                idx = idx == keySize ? 0 : idx;
                 if (startIdx == idx) break;
             }
             return false;
@@ -199,7 +271,7 @@ namespace gradylib {
 
         void erase(Key const &key) {
             size_t hash = hashFunction(key);
-            size_t idx = hash % keys.size();
+            size_t idx = hash % keySize;
             size_t startIdx = idx;
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
                 if (keys[idx] == key) {
@@ -210,7 +282,7 @@ namespace gradylib {
                     return;
                 }
                 ++idx;
-                idx = idx == keys.size() ? 0 : idx;
+                idx = idx == keySize ? 0 : idx;
                 if (startIdx == idx) break;
             }
             return;
@@ -249,11 +321,11 @@ namespace gradylib {
             }
 
             iterator &operator++() {
-                if (idx == container->keys.size()) {
+                if (idx == container->keySize) {
                     return *this;
                 }
                 ++idx;
-                while (idx < container->keys.size() && !container->setFlags.isFirstSet(idx)) {
+                while (idx < container->keySize && !container->setFlags.isFirstSet(idx)) {
                     ++idx;
                 }
                 return *this;
@@ -262,21 +334,37 @@ namespace gradylib {
 
         iterator begin() {
             if (mapSize == 0) {
-                return iterator(keys.size(), this);
+                return iterator(keySize, this);
             }
             size_t idx = 0;
-            while (idx < keys.size() && !setFlags.isFirstSet(idx)) {
+            while (idx < keySize && !setFlags.isFirstSet(idx)) {
                 ++idx;
             }
             return iterator(idx, this);
         }
 
         iterator end() {
-            return iterator(keys.size(), this);
+            return iterator(keySize, this);
         }
 
         size_t size() const {
             return mapSize;
+        }
+
+
+        void write(std::string filename) {
+            std::ofstream ofs(filename, std::ios::binary);
+            if (ofs.fail()) {
+                std::cout << "Couldn't open " << filename << " for writing in OpenHashMapTC::write\n";
+                exit(1);
+            }
+            ofs.write(static_cast<char*>(static_cast<void*>(&mapSize)), 8);
+            ofs.write(static_cast<char*>(static_cast<void*>(&keySize)), 8);
+            ofs.write(static_cast<char*>(static_cast<void*>(&loadFactor)), 8);
+            ofs.write(static_cast<char*>(static_cast<void*>(&growthFactor)), 8);
+            ofs.write(static_cast<char*>(static_cast<void*>(keys)), sizeof(Key) * keySize);
+            ofs.write(static_cast<char*>(static_cast<void*>(values)), sizeof(Value) * keySize);
+            setFlags.write(ofs);
         }
     };
 }
