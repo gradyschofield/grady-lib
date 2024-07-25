@@ -130,7 +130,7 @@ namespace gradylib {
             return values[idx];
         }
 
-        void emplace(Key const &key, Value && value) {
+        void emplace(Key && key, Value && value) {
             size_t hash = 0;
             size_t idx = 0;
             bool doesContain = false;
@@ -177,8 +177,8 @@ namespace gradylib {
                 idx = isFirstUnsetIdxSet ? firstUnsetIdx : idx;
             }
             setFlags.setBoth(idx);
-            keys[idx] = key;
-            values[idx] = std::forward<decltype(value)>(value);
+            keys[idx] = std::forward<Key>(key);
+            values[idx] = std::forward<Value>(value);
             ++mapSize;
         }
 
@@ -201,6 +201,30 @@ namespace gradylib {
                 if (startIdx == idx) break;
             }
             return false;
+        }
+
+        Value const & at(Key const &key) const {
+            if (keys.size() == 0) {
+                std::cout << "OpenHashMap doesn't contain key\n";
+                exit(1);
+            }
+            size_t hash = hashFunction(key);
+            size_t idx = hash % keys.size();
+            size_t startIdx = idx;
+            for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
+                if (isSet && keys[idx] == key) {
+                    return values[idx];
+                }
+                if (wasSet && keys[idx] == key) {
+                    std::cout << "OpenHashMap doesn't contain key\n";
+                    exit(1);
+                }
+                ++idx;
+                idx = idx == keys.size() ? 0 : idx;
+                if (startIdx == idx) break;
+            }
+            std::cout << "OpenHashMap doesn't contain key\n";
+            exit(1);
         }
 
         void erase(Key const &key) {
