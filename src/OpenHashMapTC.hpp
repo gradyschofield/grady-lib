@@ -272,7 +272,7 @@ namespace gradylib {
             return values[idx];
         }
 
-        void emplace(Key const &key, Value const &value) {
+        void put(Key const &key, Value const &value) {
             if (readOnly) {
                 std::cout << "Cannot modify mmap\n";
                 exit(1);

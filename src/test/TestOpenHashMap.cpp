@@ -94,7 +94,7 @@ int main(int argc, char ** argv) {
     gradylib::OpenHashMap<long, string, gradylib::AltHash<long>> sidx;
     //sidx.reserve(map2.size());
     for (auto [str, idx] : map2) {
-        //sidx.emplace(idx, string(str));
+        //sidx.put(idx, string(str));
         sidx[idx] = string(str);
     }
 

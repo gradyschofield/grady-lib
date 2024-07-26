@@ -125,12 +125,14 @@ namespace gradylib {
                 idx = isFirstUnsetIdxSet ? firstUnsetIdx : idx;
             }
             setFlags.setBoth(idx);
-            keys[idx] = std::forward<decltype(key)>(key);
+            keys[idx] = std::forward<KeyType>(key);
             ++mapSize;
             return values[idx];
         }
 
-        void emplace(Key && key, Value && value) {
+        template<typename KeyType, typename ValueType>
+        requires std::is_same_v<std::decay_t<KeyType>, Key> && std::is_same_v<std::decay_t<ValueType>, Value>
+        void put(KeyType && key, ValueType && value) {
             size_t hash = 0;
             size_t idx = 0;
             bool doesContain = false;
@@ -147,7 +149,7 @@ namespace gradylib {
                         isFirstUnsetIdxSet = true;
                     }
                     if (isSet && keys[idx] == key) {
-                        values[idx] = std::forward<decltype(value)>(value);
+                        values[idx] = std::forward<ValueType>(value);
                         doesContain = true;
                         break;
                     }
@@ -177,8 +179,8 @@ namespace gradylib {
                 idx = isFirstUnsetIdxSet ? firstUnsetIdx : idx;
             }
             setFlags.setBoth(idx);
-            keys[idx] = std::forward<Key>(key);
-            values[idx] = std::forward<Value>(value);
+            keys[idx] = std::forward<KeyType>(key);
+            values[idx] = std::forward<ValueType>(value);
             ++mapSize;
         }
 

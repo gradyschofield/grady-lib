@@ -48,6 +48,8 @@ namespace gradylib {
         void * memoryMapping = nullptr;
         size_t mappingSize = 0;
 
+    public:
+
         explicit MMapI2HRSOpenHashMap(std::string filename) {
             fd = open(filename.c_str(), O_RDONLY);
             if (fd < 0) {
@@ -79,7 +81,7 @@ namespace gradylib {
             return intMap.contains(idx);
         }
 
-        std::string_view const & at(IndexType idx) const {
+        std::string_view at(IndexType idx) const {
             if (!contains(idx)) {
                 std::cout << "Map doesn't contain " << idx << "\n";
                 exit(1);
@@ -91,6 +93,9 @@ namespace gradylib {
             return std::string_view(static_cast<char const *>(static_cast<void const *>(ptr)), len);
         }
 
+        size_t size() const {
+            return intMap.size();
+        }
 
         class Builder {
             OpenHashMapTC<IndexType, IntermediateIndexType> intMap;
@@ -102,14 +107,16 @@ namespace gradylib {
                 return intMap.contains(idx);
             }
 
-            void emplace(IndexType idx, std::string &&str) {
+            template<typename StringType>
+            requires std::is_same_v<std::decay_t<StringType>, std::string>
+            void put(IndexType idx, StringType &&str) {
                 IntermediateIndexType strIdx = 0;
                 if (!stringMap.contains(str)) {
                     strIdx = stringMap.size();
                     strings.push_back(str);
-                    stringMap.emplace(std::forward<std::string>(str), strIdx);
+                    stringMap.put(std::forward<StringType>(str), strIdx);
                 } else {
-                    strIdx = stringMap.at(idx);
+                    strIdx = stringMap.at(str);
                 }
                 intMap[idx] = strIdx;
             }
@@ -120,6 +127,12 @@ namespace gradylib {
                     exit(1);
                 }
                 return strings.at(intMap.at(idx));
+            }
+
+            void reserve(size_t size) {
+                intMap.reserve(size);
+                stringMap.reserve(size);
+                strings.reserve(size);
             }
 
             void write(std::string filename, int alignment = alignof(void*)) const {
