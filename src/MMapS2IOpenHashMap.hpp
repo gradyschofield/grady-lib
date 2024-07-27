@@ -39,6 +39,9 @@ SOFTWARE.
 
 namespace gradylib {
 
+    /*
+     * This is a readonly data structure for quickly loading an OpenHashMap<std::string, IndexType> from disk
+     */
     template<typename IndexType>
     class MMapS2IOpenHashMap {
         int64_t const *keyOffsets = nullptr;
@@ -50,6 +53,17 @@ namespace gradylib {
         int fd = -1;
         void * memoryMapping = nullptr;
         size_t mappingSize = 0;
+
+        std::string_view getKey(std::byte const * ptr) const {
+            int32_t len = *static_cast<int32_t const *>(static_cast<void const *>(ptr));
+            char const * p = static_cast<char const *>(static_cast<void const *>(ptr + 4));
+            return std::string_view(p, len);
+        }
+
+        std::byte const * incKeyPtr(std::byte const * keyPtr) const {
+            int32_t len = *static_cast<int32_t const *>(static_cast<void const *>(keyPtr));
+            return keyPtr + 4 + len + (4 - len%4);
+        }
 
     public:
         MMapS2IOpenHashMap() = default;
@@ -135,17 +149,6 @@ namespace gradylib {
             }
         }
 
-        std::string_view getKey(std::byte const * ptr) const {
-            int32_t len = *static_cast<int32_t const *>(static_cast<void const *>(ptr));
-            char const * p = static_cast<char const *>(static_cast<void const *>(ptr + 4));
-            return std::string_view(p, len);
-        }
-
-        std::byte const * incKeyPtr(std::byte const * keyPtr) const {
-            int32_t len = *static_cast<int32_t const *>(static_cast<void const *>(keyPtr));
-            return keyPtr + 4 + len + (4 - len%4);
-        }
-
         IndexType operator[](std::string_view key) const {
             if (keySize == 0) {
                 std::cout << key << " not found in map\n";
@@ -154,7 +157,6 @@ namespace gradylib {
             size_t hash;
             size_t idx;
             size_t startIdx;
-            size_t firstUnsetIdx = -1;
             bool isFirstUnsetIdxSet = false;
 
             hash = std::hash<std::string_view>{}(key);
@@ -163,7 +165,6 @@ namespace gradylib {
             std::byte const *keyPtr = static_cast<std::byte const *>(keys) + keyOffsets[idx];
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
                 if (!isFirstUnsetIdxSet && !isSet) {
-                    firstUnsetIdx = idx;
                     isFirstUnsetIdxSet = true;
                 }
                 std::string_view k = getKey(keyPtr);

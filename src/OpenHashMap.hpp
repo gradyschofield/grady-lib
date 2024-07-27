@@ -130,7 +130,7 @@ namespace gradylib {
         }
 
         template<typename KeyType, typename ValueType>
-        requires std::is_same_v<std::decay_t<KeyType>, Key> && std::is_same_v<std::decay_t<ValueType>, Value>
+        requires std::is_convertible_v<std::decay_t<KeyType>, Key> && std::is_same_v<std::decay_t<ValueType>, Value>
         void put(KeyType && key, ValueType && value) {
             size_t hash = 0;
             size_t idx = 0;

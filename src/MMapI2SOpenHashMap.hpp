@@ -39,6 +39,9 @@ SOFTWARE.
 
 namespace gradylib {
 
+    /*
+     * This is a readonly data structure for quickly loading an OpenHashMap<IndexType, std::string> from disk
+     */
     template<typename IndexType, typename HashFunction = std::hash<IndexType>>
     class MMapI2SOpenHashMap {
         int64_t const *valueOffsets = nullptr;
