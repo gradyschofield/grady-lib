@@ -148,6 +148,10 @@ namespace gradylib {
             return setSize;
         }
 
+        void clear() {
+            memset(underlying, 0, getUnderlyingLength(setSize) * sizeof(UnderlyingInt));
+        }
+
         void resize(size_t size) {
             if (readOnly) {
                 std::cout << "Tried to resize a read only BitPairSet\n";

@@ -462,6 +462,14 @@ namespace gradylib {
             return mapSize;
         }
 
+        void clear() {
+            if (readOnly) {
+                std::cout << "Can't clear a readonly set\n";
+                exit(1);
+            }
+            setFlags.clear();
+            mapSize = 0;
+        }
 
         void write(std::string filename, int alignment = alignof(void*)) const {
             std::ofstream ofs(filename, std::ios::binary);
@@ -473,6 +481,7 @@ namespace gradylib {
         }
 
         void write(std::ofstream & ofs, int alignment = alignof(void*)) const {
+            size_t startFileOffset = ofs.tellp();
             size_t t;
             t = mapSize;
             ofs.write(static_cast<char*>(static_cast<void *>(&t)), 8);
@@ -494,14 +503,14 @@ namespace gradylib {
                 char t = 0;
                 ofs.write(&t, 1);
             }
-            valuesOffset = ofs.tellp();
+            valuesOffset = static_cast<size_t>(ofs.tellp()) - startFileOffset;
             ofs.write(static_cast<char*>(static_cast<void*>(values)), sizeof(Value) * keySize);
             int bitPairSetOffsetPad = alignment - ofs.tellp() % alignment;
             for (int i = 0; i < bitPairSetOffsetPad; ++i) {
                 char t = 0;
                 ofs.write(&t, 1);
             }
-            bitPairSetOffset = ofs.tellp();
+            bitPairSetOffset = static_cast<size_t>(ofs.tellp()) - startFileOffset;
             setFlags.write(ofs);
 
             ofs.seekp(valueOffsetPos);

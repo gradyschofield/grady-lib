@@ -3,6 +3,7 @@
 //
 
 #include<string>
+#include<unordered_map>
 
 #include<MMapI2HRSOpenHashMap.hpp>
 #include<OpenHashMap.hpp>
@@ -26,9 +27,10 @@ int64_t myRand() {
 }
 
 int main() {
-    int numStrings = 1E7;
-    int numInts = 1E8;
+    int numStrings = 1E6;
+    int numInts = 1E7;
     MMapI2HRSOpenHashMap<int64_t>::Builder b;
+    unordered_map<int64_t, string> test;
     OpenHashMap<string, int> strs;
     vector<string> strArray;
     strs.reserve(numStrings);
@@ -49,10 +51,31 @@ int main() {
         while (b.contains(idx)) {
             idx = rand();
         }
-        b.put(idx, strArray[rand() % strArray.size()]);
+        string const & str = strArray[rand() % strArray.size()];
+        b.put(idx, str);
+        test.emplace(idx, str);
     }
     auto endTime = chrono::high_resolution_clock::now();
     cout << "build time: " << chrono::duration_cast<chrono::milliseconds>(endTime-startTime).count() << "\n";
+
+
+    startTime = chrono::high_resolution_clock::now();
+    if (b.size() != test.size()) {
+        cout << "size problem\n";
+        exit(1);
+    }
+    for (auto & [key, str] : test) {
+        if (!b.contains(key)) {
+            cout << "map does not contain key " << key << "\n";
+            exit(1);
+        } else if (b.at(key) != str) {
+            cout << "wrong value " << key << " " << str << " " << b.at(key) << "\n";
+            exit(1);
+        }
+    }
+    endTime = chrono::high_resolution_clock::now();
+    cout << "test time: " << chrono::duration_cast<chrono::milliseconds>(endTime-startTime).count() << "\n";
+
 
     startTime = chrono::high_resolution_clock::now();
     b.write("hrsmap.bin");
@@ -64,6 +87,21 @@ int main() {
     endTime = chrono::high_resolution_clock::now();
     cout << "load time: " << chrono::duration_cast<chrono::milliseconds>(endTime-startTime).count() << "\n";
 
-    cout << "size: " << m.size() << "\n";
+    startTime = chrono::high_resolution_clock::now();
+    if (m.size() != test.size()) {
+        cout << "size problem\n";
+        exit(1);
+    }
+    for (auto & [key, str] : test) {
+        if (!m.contains(key)) {
+            cout << "map does not contain key " << key << "\n";
+            exit(1);
+        } else if (m.at(key) != str) {
+            cout << "wrong value " << key << " " << str << " " << m.at(key) << "\n";
+            exit(1);
+        }
+    }
+    endTime = chrono::high_resolution_clock::now();
+    cout << "test time: " << chrono::duration_cast<chrono::milliseconds>(endTime-startTime).count() << "\n";
     return 0;
 }

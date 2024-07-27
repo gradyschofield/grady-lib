@@ -64,10 +64,10 @@ namespace gradylib {
             }
             std::byte *ptr = static_cast<std::byte *>(memoryMapping);
             std::byte *base = ptr;
-            size_t stringsOffset = *static_cast<size_t*>(static_cast<void*>(ptr));
+            size_t intMapOffset = *static_cast<size_t*>(static_cast<void*>(ptr));
             ptr += 8;
-            intMap = OpenHashMapTC<IndexType, IntermediateIndexType>(ptr);
-            stringMapping = base + stringsOffset;
+            stringMapping = ptr;
+            intMap = OpenHashMapTC<IndexType, IntermediateIndexType>(base + intMapOffset);
         }
 
         ~MMapI2HRSOpenHashMap() {
@@ -121,7 +121,7 @@ namespace gradylib {
                 intMap[idx] = strIdx;
             }
 
-            std::string_view const &at(IndexType idx) const {
+            std::string_view at(IndexType idx) const {
                 if (!contains(idx)) {
                     std::cout << "Map doesn't contain " << idx << "\n";
                     exit(1);
@@ -135,23 +135,24 @@ namespace gradylib {
                 strings.reserve(size);
             }
 
-            void write(std::string filename, int alignment = alignof(void*)) const {
+            size_t size() const {
+                return intMap.size();
+            }
+
+            void write(std::string filename, int alignment = alignof(void*)) {
                 std::ofstream ofs(filename, std::ios::binary);
                 if (ofs.fail()) {
                     std::cout << "Problem opening file " << filename << "\n";
                     exit(1);
                 }
-                size_t stringsOffset = 0;
-                ofs.write(static_cast<char*>(static_cast<void*>(&stringsOffset)), 8);
-                intMap.write(ofs, alignment);
-                int padSize = alignment - ofs.tellp() % alignment;
-                for (int i = 0; i < padSize; ++i) {
-                    char t = 0;
-                    ofs.write(&t, 1);
-                }
-                stringsOffset = ofs.tellp();
-                for (std::string const & s : strings) {
+                size_t intMapOffset = 0;
+                ofs.write(static_cast<char*>(static_cast<void*>(&intMapOffset)), 8);
+                OpenHashMapTC<IntermediateIndexType, IntermediateIndexType> stringOffsetMap;
+                size_t stringTableOffset = ofs.tellp();
+                for (size_t i = 0; i < strings.size(); ++i) {
+                    std::string const & s = strings[i];
                     int32_t len = s.length();
+                    stringOffsetMap.put(i, static_cast<size_t>(ofs.tellp()) - stringTableOffset);
                     ofs.write(static_cast<char*>(static_cast<void*>(&len)), 4);
                     ofs.write(s.data(), len);
                     int padSize = 4 - ofs.tellp() % 4;
@@ -160,11 +161,26 @@ namespace gradylib {
                         ofs.write(&t, 1);
                     }
                 }
+                for (auto & [idx1, idx2] : intMap) {
+                    idx2 = stringOffsetMap.at(idx2);
+                }
+                int padSize = alignment - ofs.tellp() % alignment;
+                for (int i = 0; i < padSize; ++i) {
+                    char t = 0;
+                    ofs.write(&t, 1);
+                }
+                intMapOffset = ofs.tellp();
+                intMap.write(ofs, alignment);
+
                 ofs.seekp(0, std::ios::beg);
-                ofs.write(static_cast<char*>(static_cast<void*>(&stringsOffset)), 8);
+                ofs.write(static_cast<char*>(static_cast<void*>(&intMapOffset)), 8);
+
+                intMap.clear();
+                stringMap.clear();
+                strings.clear();
             }
         };
     };
 }
 
-#endif //GRADY_LIB_MMAPI2HRSOPENHASHMAP_HPP
+#endif

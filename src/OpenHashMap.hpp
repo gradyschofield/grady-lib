@@ -255,6 +255,11 @@ namespace gradylib {
             rehash(size);
         }
 
+        void clear() {
+            setFlags.clear();
+            mapSize = 0;
+        }
+
         class iterator {
             size_t idx;
             OpenHashMap *container;

@@ -1,6 +1,7 @@
 MMapI2HRSOpenHashMap
     - copy/move constructors/assignments
 Constructors on everything that take growth/load factor arguments
+Create OpenHashSet from OpenHashMap
 Fix exception correctness throughout
 Remove the exits and return optionals or throw exceptions
 Implement COW for mmap'd OpenHashSetTC

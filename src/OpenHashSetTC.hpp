@@ -354,6 +354,15 @@ namespace gradylib {
             return setSize;
         }
 
+        void clear() {
+            if (readOnly) {
+                std::cout << "Can't clear a readonly set\n";
+                exit(1);
+            }
+            setFlags.clear();
+            setSize = 0;
+        }
+
         /*
          * 8 set size
          * 8 key size
