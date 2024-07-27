@@ -9,3 +9,4 @@ Implement COW for mmap'd OpenHashMapTC
 Implement clone in MMapI2sOpenHashMap
 Implement clone in MMapS2IOpenHashMap
 Remove AltIntHash
+Very thorough testing

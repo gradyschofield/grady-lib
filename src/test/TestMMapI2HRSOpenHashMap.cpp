@@ -27,8 +27,8 @@ int64_t myRand() {
 }
 
 int main() {
-    int numStrings = 1E6;
-    int numInts = 1E7;
+    int numStrings = 1E7;
+    int numInts = 1E8;
     MMapI2HRSOpenHashMap<int64_t>::Builder b;
     unordered_map<int64_t, string> test;
     OpenHashMap<string, int> strs;

@@ -56,7 +56,6 @@ namespace gradylib {
             } else {
                 newSize = std::max<size_t>(keys.size() + 1, std::max<size_t>(1, keys.size()) * growthFactor);
             }
-            std::cout << "rehashing " << newSize << "\n";
             std::vector<Key> newKeys(newSize);
             std::vector<Value> newValues(newSize);
             BitPairSet newSetFlags(newSize);
