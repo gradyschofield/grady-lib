@@ -26,15 +26,24 @@ SOFTWARE.
 #define GRADY_LIB_OPENHASHMAP_HPP
 
 #include<fstream>
+#include<future>
 #include<string>
 #include<type_traits>
 #include<vector>
 
+#include<Common.hpp>
 #include<BitPairSet.hpp>
 
 namespace gradylib {
-
     template<typename Key, typename Value, typename HashFunction = std::hash<Key>>
+    requires std::is_default_constructible_v<Key> && std::is_default_constructible_v<Value>
+    class OpenHashMap;
+
+    template<Mergeable ReturnValue, typename Key, typename Value, typename HashFunction, typename Callable>
+    requires std::is_invocable_r_v<void, Callable, ReturnValue &, Key const &, Value const &> && std::is_copy_constructible_v<Callable>
+    std::future<ReturnValue> parallelForEach(ThreadPool & tp, OpenHashMap<Key, Value, HashFunction> const & m, Callable && f, size_t numThreads = 0);
+
+    template<typename Key, typename Value, typename HashFunction>
     requires std::is_default_constructible_v<Key> && std::is_default_constructible_v<Value>
     class OpenHashMap {
 
@@ -276,7 +285,7 @@ namespace gradylib {
                 return idx != other.idx;
             }
 
-            const std::pair<Key const &, Value &> operator*() const {
+            const std::pair<Key const &, Value &> operator*() {
                 return {container->keys[idx], container->values[idx]};
             }
 
@@ -315,12 +324,71 @@ namespace gradylib {
             return iterator(keys.size(), this);
         }
 
+        class const_iterator {
+            size_t idx;
+            OpenHashMap const *container;
+        public:
+            const_iterator(size_t idx, OpenHashMap const *container)
+                    : idx(idx), container(container) {
+            }
+
+            bool operator==(const_iterator const &other) const {
+                return idx == other.idx;
+            }
+
+            bool operator!=(const_iterator const &other) const {
+                return idx != other.idx;
+            }
+
+            const std::pair<Key const &, Value const &> operator*() const {
+                return {container->keys[idx], container->values[idx]};
+            }
+
+            Key const &key() const {
+                return container->keys[idx];
+            }
+
+            Value const &value() const {
+                return container->values[idx];
+            }
+
+            const_iterator &operator++() {
+                if (idx == container->keys.size()) {
+                    return *this;
+                }
+                ++idx;
+                while (idx < container->keys.size() && !container->setFlags.isFirstSet(idx)) {
+                    ++idx;
+                }
+                return *this;
+            }
+        };
+
+        const_iterator begin() const {
+            if (mapSize == 0) {
+                return const_iterator(keys.size(), this);
+            }
+            size_t idx = 0;
+            while (idx < keys.size() && !setFlags.isFirstSet(idx)) {
+                ++idx;
+            }
+            return const_iterator(idx, this);
+        }
+
+        const_iterator end() const {
+            return const_iterator(keys.size(), this);
+        }
+
         size_t size() const {
             return mapSize;
         }
 
         template<typename IndexType>
         friend void writeMappable(std::string filename, OpenHashMap<std::string, IndexType> const & m);
+
+        template<Mergeable ReturnValue, Key, Value, HashFunction, typename Callable>
+        requires std::is_invocable_r_v<void, Callable, ReturnValue &, Key const &, Value const &> && std::is_copy_constructible_v<Callable>
+        friend std::future<ReturnValue> parallelForEach(ThreadPool & tp, OpenHashMap<Key, Value, HashFunction> const & m, Callable && f, size_t numThreads);
     };
 
 

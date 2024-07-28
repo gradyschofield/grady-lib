@@ -30,7 +30,7 @@ namespace gradylib {
             return threads.size();
         }
 
-        ThreadPool(int numThreads)
+        ThreadPool(int numThreads = std::thread::hardware_concurrency())
             : freeThreads(numThreads)
         {
             for (int i = 0; i < numThreads; ++i) {
@@ -86,7 +86,6 @@ namespace gradylib {
             for (auto & t : threads) {
                 t.join();
             }
-            endTime = std::chrono::high_resolution_clock::now();
         }
     };
 }
