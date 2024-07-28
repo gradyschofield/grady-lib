@@ -19,6 +19,7 @@ set(SRC
         src/OpenHashMapTC.hpp
         src/OpenHashSetTC.hpp
         src/ThreadPool.hpp
+        src/ParallelTraversals.hpp
 )
 
 add_executable(testOpenHashSetTC ${SRC} src/test/TestOpenHashSetTC.cpp)
@@ -28,3 +29,4 @@ add_executable(testAlignment ${SRC} src/test/AlignmentStuff.cpp)
 add_executable(perfectForwardStuff ${SRC} src/test/PerfectForwardStuff.cpp)
 add_executable(testMMapI2HRSOpenHashMap ${SRC} src/test/TestMMapI2HRSOpenHashMap.cpp)
 add_executable(testParallelMapOperation ${SRC} src/test/TestParallelMapOperation.cpp)
+add_executable(threadPoolTest ${SRC} src/test/ThreadPoolTest.cpp)
