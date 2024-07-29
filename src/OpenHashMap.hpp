@@ -26,15 +26,29 @@ SOFTWARE.
 #define GRADY_LIB_OPENHASHMAP_HPP
 
 #include<fstream>
+#include<future>
 #include<string>
 #include<type_traits>
 #include<vector>
 
+#include<Common.hpp>
 #include<BitPairSet.hpp>
+#include<ThreadPool.hpp>
+#include<ParallelTraversals.hpp>
 
 namespace gradylib {
-
     template<typename Key, typename Value, typename HashFunction = std::hash<Key>>
+    requires std::is_default_constructible_v<Key> && std::is_default_constructible_v<Value>
+    class OpenHashMap;
+
+    template<typename Key, typename Value, typename HashFunction>
+    void mergePartials(OpenHashMap<Key, Value, HashFunction> & m1, OpenHashMap<Key, Value, HashFunction> const & m2) {
+        for (auto const & [key, value] : m2) {
+            m1[key] = value;
+        }
+    }
+
+    template<typename Key, typename Value, typename HashFunction>
     requires std::is_default_constructible_v<Key> && std::is_default_constructible_v<Value>
     class OpenHashMap {
 
@@ -82,6 +96,11 @@ namespace gradylib {
         }
 
     public:
+
+        OpenHashMap() = default;
+        OpenHashMap(size_t size) {
+            rehash(size);
+        }
 
         template<typename KeyType>
         Value &operator[](KeyType && key) {
@@ -275,7 +294,7 @@ namespace gradylib {
                 return idx != other.idx;
             }
 
-            const std::pair<Key const &, Value &> operator*() const {
+            const std::pair<Key const &, Value &> operator*() {
                 return {container->keys[idx], container->values[idx]};
             }
 
@@ -314,8 +333,138 @@ namespace gradylib {
             return iterator(keys.size(), this);
         }
 
+        class const_iterator {
+            size_t idx;
+            OpenHashMap const *container;
+        public:
+            const_iterator(size_t idx, OpenHashMap const *container)
+                    : idx(idx), container(container) {
+            }
+
+            bool operator==(const_iterator const &other) const {
+                return idx == other.idx;
+            }
+
+            bool operator!=(const_iterator const &other) const {
+                return idx != other.idx;
+            }
+
+            const std::pair<Key const &, Value const &> operator*() const {
+                return {container->keys[idx], container->values[idx]};
+            }
+
+            Key const &key() const {
+                return container->keys[idx];
+            }
+
+            Value const &value() const {
+                return container->values[idx];
+            }
+
+            const_iterator &operator++() {
+                if (idx == container->keys.size()) {
+                    return *this;
+                }
+                ++idx;
+                while (idx < container->keys.size() && !container->setFlags.isFirstSet(idx)) {
+                    ++idx;
+                }
+                return *this;
+            }
+        };
+
+        const_iterator begin() const {
+            if (mapSize == 0) {
+                return const_iterator(keys.size(), this);
+            }
+            size_t idx = 0;
+            while (idx < keys.size() && !setFlags.isFirstSet(idx)) {
+                ++idx;
+            }
+            return const_iterator(idx, this);
+        }
+
+        const_iterator end() const {
+            return const_iterator(keys.size(), this);
+        }
+
         size_t size() const {
             return mapSize;
+        }
+
+
+        template<Mergeable ReturnValue = OpenHashMap<Key, Value, HashFunction>,
+                typename Callable,
+                typename PartialInitializer = PartialDefaultConstructor<ReturnValue>,
+                typename FinalInitializer = FinalDefaultConstructor<ReturnValue>>
+        requires std::is_invocable_r_v<void, Callable, ReturnValue &, Key const &, Value const &> &&
+                 std::is_copy_constructible_v<Callable> &&
+                 std::is_invocable_r_v<ReturnValue, PartialInitializer, int, int> &&
+                 std::is_invocable_r_v<ReturnValue, FinalInitializer, int>
+        std::future<ReturnValue> parallelForEach(Callable && f,
+                                                 PartialInitializer && partialInitializer = PartialInitializer{},
+                                                 FinalInitializer && finalInitializer = FinalInitializer{}) const {
+            if (!GRADY_LIB_DEFAULT_THREADPOOL) {
+                std::lock_guard lg(GRADY_LIB_DEFAULT_THREADPOOL_MUTEX);
+                if (!GRADY_LIB_DEFAULT_THREADPOOL) {
+                    GRADY_LIB_DEFAULT_THREADPOOL = std::make_unique<ThreadPool>();
+                }
+            }
+            return parallelForEach(*GRADY_LIB_DEFAULT_THREADPOOL,
+                                   std::forward<Callable>(f),
+                                   std::forward<PartialInitializer>(partialInitializer),
+                                   std::forward<FinalInitializer>(finalInitializer));
+        }
+
+        template<Mergeable ReturnValue = OpenHashMap<Key, Value, HashFunction>,
+                typename Callable,
+                typename PartialInitializer = PartialDefaultConstructor<ReturnValue>,
+                typename FinalInitializer = FinalDefaultConstructor<ReturnValue>>
+        requires std::is_invocable_r_v<void, Callable, ReturnValue &, Key const &, Value const &> &&
+                 std::is_copy_constructible_v<Callable> &&
+                 std::is_invocable_r_v<ReturnValue, PartialInitializer, int, int> &&
+                 std::is_invocable_r_v<ReturnValue, FinalInitializer, int>
+        std::future<ReturnValue> parallelForEach(ThreadPool & tp,
+                                                 Callable && f,
+                                                 PartialInitializer && partialInitializer = PartialInitializer{},
+                                                 FinalInitializer && finalInitializer = PartialInitializer{},
+                                                 size_t numThreads = 0) const {
+            if (numThreads == 0) {
+                numThreads = tp.size();
+            }
+            numThreads = std::min(numThreads, size());
+            struct Result {
+                ReturnValue final;
+                std::mutex finalMutex;
+                std::promise<ReturnValue> promise;
+                size_t remainingThreads;
+
+                Result(ReturnValue && final, size_t remainingThreads)
+                    : final(std::move(final)), remainingThreads(remainingThreads)
+                {
+                }
+            };
+            std::shared_ptr<Result> result = std::make_shared<Result>(finalInitializer(numThreads), numThreads);
+            size_t start = 0;
+            for (size_t threadIdx = 0; threadIdx < numThreads; ++threadIdx) {
+                size_t stop = start + keys.size() / numThreads + (threadIdx < keys.size() % numThreads ? 1 : 0);
+                tp.add([threadIdx, numThreads, start, stop, f, result, this, &partialInitializer]() {
+                    ReturnValue partial = partialInitializer(threadIdx, numThreads);
+                    for (size_t j = start; j < stop; ++j) {
+                        if (setFlags.isFirstSet(j)) {
+                            f(partial, keys[j], values[j]);
+                        }
+                    }
+                    std::lock_guard lg(result->finalMutex);
+                    mergePartials(result->final, partial);
+                    if (result->remainingThreads == 1) {
+                        result->promise.set_value(std::move(result->final));
+                    }
+                    --result->remainingThreads;
+                });
+                start = stop;
+            }
+            return result->promise.get_future();
         }
 
         template<typename IndexType>

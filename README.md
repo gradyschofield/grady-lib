@@ -1,10 +1,10 @@
 # grady-lib
-Basic open address hash sets/maps. Integer to std:string and std::string to integer maps are written to file in an easily memory mapped format, 
+Basic open address hash sets/maps. Integer to std:string and std::string to integer maps can be written to a file in an easily memory mapped format, 
 - OpenHashMap
 - MMapI2SOpenHashMap
 - MMapS2IOpenHashMap
 
-Open address hash sets and maps with fast copying for trivially copyable types.  Memory mappable from file.
+Open address hash sets and maps with fast copy/destruction for trivially copyable types.  Memory mappable from file.
 - OpenHashMapTC
 - OpenHashSetTC
 
