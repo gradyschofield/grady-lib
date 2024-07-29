@@ -21,7 +21,7 @@ namespace gradylib {
         std::mutex workMutex;
         std::condition_variable workerConditionVariable;
         std::condition_variable waiterConditionVariable;
-        std::atomic<int> freeThreads;
+        std::atomic<int> freeThreads{0};
         std::atomic<bool> stop{false};
 
     public:
@@ -88,6 +88,9 @@ namespace gradylib {
             }
         }
     };
+
+    std::unique_ptr<ThreadPool> GRADY_LIB_DEFAULT_THREADPOOL;
+    std::mutex GRADY_LIB_DEFAULT_THREADPOOL_MUTEX;
 }
 
 #endif //GRADY_LIB_THREADPOOL_HPP

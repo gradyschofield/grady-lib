@@ -12,8 +12,6 @@ namespace gradylib {
     concept Mergeable = requires(T a, T b) {
         { mergePartials(a, b) } -> std::same_as<void>;
     };
-
-    class ThreadPool;
 }
 
 #endif //GRADY_LIB_COMMON_HPP
