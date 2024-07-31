@@ -1,4 +1,5 @@
 const operator[]s
+Just pass std::hash as third template parameter in maps.  Don't require std::hash<IndexType>
 MMapI2HRSOpenHashMap
     - copy/move constructors/assignments
 Constructors on everything that take growth/load factor arguments
