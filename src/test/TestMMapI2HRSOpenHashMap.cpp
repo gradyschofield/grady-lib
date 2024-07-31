@@ -5,6 +5,7 @@
 #include<string>
 #include<unordered_map>
 
+#include<AltIntHash.hpp>
 #include<MMapI2HRSOpenHashMap.hpp>
 #include<OpenHashMap.hpp>
 

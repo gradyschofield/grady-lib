@@ -26,6 +26,7 @@ SOFTWARE.
 #define GRADY_LIB_MMAPI2HRSOPENHASHMAP_HPP
 
 #include<fcntl.h>
+#include<errno.h>
 #include<sys/mman.h>
 #include<unistd.h>
 
@@ -39,10 +40,10 @@ SOFTWARE.
 
 namespace gradylib {
 
-    template<typename IndexType, typename IntermediateIndexType = uint32_t>
-    requires std::is_integral_v<IndexType>
+    template<typename IndexType, typename IntermediateIndexType = uint32_t, typename HashFunction = std::hash<IndexType>>
+    requires std::is_integral_v<IndexType> && std::is_integral_v<IntermediateIndexType>
     class MMapI2HRSOpenHashMap {
-        OpenHashMapTC<IndexType, IntermediateIndexType> intMap;
+        OpenHashMapTC<IndexType, IntermediateIndexType, HashFunction> intMap;
         void const * stringMapping;
         int fd = -1;
         void * memoryMapping = nullptr;
@@ -67,7 +68,7 @@ namespace gradylib {
             size_t intMapOffset = *static_cast<size_t*>(static_cast<void*>(ptr));
             ptr += 8;
             stringMapping = ptr;
-            intMap = OpenHashMapTC<IndexType, IntermediateIndexType>(base + intMapOffset);
+            intMap = OpenHashMapTC<IndexType, IntermediateIndexType, HashFunction>(base + intMapOffset);
         }
 
         ~MMapI2HRSOpenHashMap() {
@@ -98,7 +99,7 @@ namespace gradylib {
         }
 
         class Builder {
-            OpenHashMapTC<IndexType, IntermediateIndexType> intMap;
+            OpenHashMapTC<IndexType, IntermediateIndexType, HashFunction> intMap;
             OpenHashMap<std::string, IntermediateIndexType> stringMap;
             std::vector<std::string> strings;
 

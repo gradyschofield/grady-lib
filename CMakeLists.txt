@@ -31,3 +31,4 @@ add_executable(testMMapI2HRSOpenHashMap ${SRC} src/test/TestMMapI2HRSOpenHashMap
 add_executable(testParallelMapOperation ${SRC} src/test/TestParallelMapOperation.cpp)
 add_executable(threadPoolTest ${SRC} src/test/ThreadPoolTest.cpp)
 add_executable(testParallelTraversals ${SRC} src/test/TestParallelTraversals.cpp)
+add_executable(testAltIntHash ${SRC} src/test/TestAltIntHash.cpp)

@@ -33,6 +33,7 @@ SOFTWARE.
 #include<algorithm>
 #include<bit>
 #include<cstdint>
+#include<cstring>
 #include<fstream>
 #include<iostream>
 #include<utility>

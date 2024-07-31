@@ -202,7 +202,7 @@ namespace gradylib {
             ++mapSize;
         }
 
-        bool contains(Key const &key) {
+        bool contains(Key const &key) const {
             if (keys.size() == 0) {
                 return false;
             }
@@ -469,6 +469,9 @@ namespace gradylib {
 
         template<typename IndexType>
         friend void writeMappable(std::string filename, OpenHashMap<std::string, IndexType> const & m);
+
+        template<typename IndexType>
+        friend void writeMappable(std::string filename, OpenHashMap<IndexType, std::string> const & m);
     };
 
 

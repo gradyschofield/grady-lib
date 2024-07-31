@@ -29,6 +29,7 @@ SOFTWARE.
 #include<sys/mman.h>
 #include<unistd.h>
 
+#include<filesystem>
 #include<fstream>
 #include<memory>
 #include<type_traits>

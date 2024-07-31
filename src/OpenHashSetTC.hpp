@@ -54,8 +54,9 @@ SOFTWARE.
 #include<unistd.h>
 
 #include<cstddef>
-#include<type_traits>
+#include<filesystem>
 #include<fstream>
+#include<type_traits>
 #include<vector>
 
 #include<BitPairSet.hpp>
@@ -254,7 +255,7 @@ namespace gradylib {
             ++setSize;
         }
 
-        bool contains(Key const &key) {
+        bool contains(Key const &key) const {
             if (keySize == 0) return false;
             size_t hash = hashFunction(key);
             size_t idx = hash % keySize;

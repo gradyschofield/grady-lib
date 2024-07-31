@@ -1,3 +1,4 @@
+const operator[]s
 MMapI2HRSOpenHashMap
     - copy/move constructors/assignments
 Constructors on everything that take growth/load factor arguments

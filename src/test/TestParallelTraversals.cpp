@@ -9,7 +9,7 @@ using namespace gradylib;
 using namespace std;
 
 int main() {
-    OpenHashMap<int64_t, int64_t, AltHash<int64_t>> m;
+    OpenHashMap<int64_t, int64_t, AltIntHash<int64_t>> m;
     size_t num = 100000;
     for (size_t i = 0; i < num; ++i) {
         m[i] = rand();
@@ -20,10 +20,10 @@ int main() {
         partial[key] = value;
     },
     [size = m.size()](int threadIdx, int numThreads) {
-        return OpenHashMap<int64_t, int64_t, AltHash<int64_t>>(size / numThreads + numThreads);
+        return OpenHashMap<int64_t, int64_t, AltIntHash<int64_t>>(size / numThreads + numThreads);
     },
     [size = m.size()](int numThreads) {
-        return OpenHashMap<int64_t, int64_t, AltHash<int64_t>>(size);
+        return OpenHashMap<int64_t, int64_t, AltIntHash<int64_t>>(size);
     });
 #else
     auto f = m.parallelForEach([](decltype(m) & partial, int64_t const & key, int64_t const & value){

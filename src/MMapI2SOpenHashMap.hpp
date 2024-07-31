@@ -44,7 +44,7 @@ namespace gradylib {
      */
     template<typename IndexType, typename HashFunction = std::hash<IndexType>>
     class MMapI2SOpenHashMap {
-        int64_t const *valueOffsets = nullptr;
+        size_t const *valueOffsets = nullptr;
         IndexType const * keys = nullptr;
         void const * values = nullptr;
         BitPairSet setFlags;
@@ -129,11 +129,11 @@ namespace gradylib {
             ptr += 8;
             size_t bitPairSetOffset = *static_cast<size_t *>(static_cast<void *>(ptr));
             ptr += 8;
-            valueOffsets = static_cast<int64_t *>(static_cast<void *>(ptr));
+            valueOffsets = static_cast<size_t*>(static_cast<void *>(ptr));
             ptr += 8 * keySize;
-            keys = static_cast<void *>(static_cast<void *>(ptr));
-            ptr += 8 * keySize;
-            values = static_cast<IndexType *>(static_cast<void *>(ptr));
+            keys = static_cast<IndexType *>(static_cast<void *>(ptr));
+            ptr += sizeof(IndexType) * keySize;
+            values = static_cast<void *>(ptr);
             setFlags = BitPairSet(static_cast<void *>(base + bitPairSetOffset));
         }
 
@@ -183,7 +183,7 @@ namespace gradylib {
             exit(1);
         }
 
-        bool contains(IndexType key) {
+        bool contains(IndexType key) const {
             if (keySize == 0) {
                 return false;
             }

@@ -10,6 +10,7 @@
 #include<AltIntHash.hpp>
 #include<OpenHashMap.hpp>
 #include<MMapS2IOpenHashMap.hpp>
+#include<MMapI2SOpenHashMap.hpp>
 
 using namespace std;
 
@@ -86,12 +87,7 @@ int main(int argc, char ** argv) {
     cout << "MMapS2IOpenHashMap check " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << " ms\n";
 
     int num = 0;
-    struct AltHash {
-        size_t operator()(long const &i) const noexcept {
-            return i * 94123453451234 + 4123451435554345;
-        }
-    };
-    gradylib::OpenHashMap<long, string, gradylib::AltHash<long>> sidx;
+    gradylib::OpenHashMap<long, string, gradylib::AltIntHash<long>> sidx;
     //sidx.reserve(map2.size());
     for (auto [str, idx] : map2) {
         //sidx.put(idx, string(str));
@@ -114,6 +110,31 @@ int main(int argc, char ** argv) {
     }
 
 
+    gradylib::OpenHashMap<long, string> i2s;
+    i2s.reserve(map.size());
+    unordered_map<long, string> testI2s;
+    for (auto const & [str, idx] : map) {
+        i2s.put(idx, str);
+        testI2s[idx] = str;
+    }
+
+    gradylib::writeMappable("i2s.bin", i2s);
+
+    gradylib::MMapI2SOpenHashMap<long, string> i2sLoaded("i2s.bin");
+
+    if (testI2s.size() != i2sLoaded.size()) {
+        cout << "size problem for i2s\n";
+    }
+
+    for (auto const & [idx, str] : testI2s) {
+        if (!i2s.contains(idx)) {
+            cout << "key problem in i2s\n";
+            exit(1);
+        } else if (i2s[idx] != str) {
+            cout << "value problem in i2s\n";
+            exit(1);
+        }
+    }
 
     return 0;
 }

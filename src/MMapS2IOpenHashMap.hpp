@@ -190,7 +190,7 @@ namespace gradylib {
             exit(1);
         }
 
-        bool contains(std::string_view key) {
+        bool contains(std::string_view key) const {
             if (keySize == 0) {
                 return false;
             }
