@@ -62,6 +62,9 @@ namespace gradylib {
         }
 
     public:
+        typedef IndexType key_type;
+        typedef std::string mapped_type;
+
         MMapI2SOpenHashMap() = default;
 
         MMapI2SOpenHashMap(MMapI2SOpenHashMap const &) = delete;

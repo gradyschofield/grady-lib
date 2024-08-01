@@ -118,6 +118,8 @@ namespace gradylib {
         }
 
     public:
+        typedef Key key_type;
+        typedef Value mapped_type;
 
         OpenHashMapTC() = default;
 

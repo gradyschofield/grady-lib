@@ -112,6 +112,8 @@ namespace gradylib {
         }
 
     public:
+        typedef Key key_type;
+        typedef Key value_type;
 
         OpenHashSetTC() = default;
 

@@ -50,6 +50,8 @@ namespace gradylib {
         size_t mappingSize = 0;
 
     public:
+        typedef IndexType key_type;
+        typedef std::string mapped_type;
 
         explicit MMapI2HRSOpenHashMap(std::string filename) {
             fd = open(filename.c_str(), O_RDONLY);
