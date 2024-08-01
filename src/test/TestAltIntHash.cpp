@@ -29,7 +29,7 @@ void testMap(Test const & test, Standard const & standard) {
 }
 
 int main() {
-    OpenHashMap<int8_t, int8_t, AltIntHash<int8_t>> map8;
+    OpenHashMap<int8_t, int8_t, AltIntHash> map8;
     unordered_map<int8_t, int8_t> testMap8;
 
     for (int i = 0; i < 127; ++i) {
@@ -39,7 +39,7 @@ int main() {
 
     testMap(map8, testMap8);
 
-    OpenHashMap<uint8_t, uint8_t, AltIntHash<uint8_t>> map8u;
+    OpenHashMap<uint8_t, uint8_t, AltIntHash> map8u;
     unordered_map<uint8_t, uint8_t> testMap8u;
 
     for (int i = 0; i < 255; ++i) {
@@ -49,7 +49,7 @@ int main() {
 
     testMap(map8u, testMap8u);
 
-    OpenHashMap<int16_t, int16_t, AltIntHash<int16_t>> map16;
+    OpenHashMap<int16_t, int16_t, AltIntHash> map16;
     unordered_map<int16_t, int16_t> testMap16;
 
     for (int i = 0; i < 32767; ++i) {
@@ -59,7 +59,7 @@ int main() {
 
     testMap(map16, testMap16);
 
-    OpenHashMap<uint16_t, uint16_t, AltIntHash<uint16_t>> map16u;
+    OpenHashMap<uint16_t, uint16_t, AltIntHash> map16u;
     unordered_map<uint16_t, uint16_t> testMap16u;
 
     for (int i = 0; i < 65535; ++i) {
@@ -69,7 +69,7 @@ int main() {
 
     testMap(map16u, testMap16u);
 
-    OpenHashMap<uint64_t, uint64_t, AltIntHash<uint64_t>> map64u;
+    OpenHashMap<uint64_t, uint64_t, AltIntHash> map64u;
     unordered_map<uint64_t, uint64_t> testMap64u;
 
     int64_t num = 1E7;

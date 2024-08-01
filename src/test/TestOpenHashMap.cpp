@@ -87,7 +87,7 @@ int main(int argc, char ** argv) {
     cout << "MMapS2IOpenHashMap check " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << " ms\n";
 
     int num = 0;
-    gradylib::OpenHashMap<long, string, gradylib::AltIntHash<long>> sidx;
+    gradylib::OpenHashMap<long, string, gradylib::AltIntHash> sidx;
     //sidx.reserve(map2.size());
     for (auto [str, idx] : map2) {
         //sidx.put(idx, string(str));
@@ -120,7 +120,7 @@ int main(int argc, char ** argv) {
 
     gradylib::writeMappable("i2s.bin", i2s);
 
-    gradylib::MMapI2SOpenHashMap<long, string> i2sLoaded("i2s.bin");
+    gradylib::MMapI2SOpenHashMap<long> i2sLoaded("i2s.bin");
 
     if (testI2s.size() != i2sLoaded.size()) {
         cout << "size problem for i2s\n";

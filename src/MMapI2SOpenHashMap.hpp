@@ -42,7 +42,7 @@ namespace gradylib {
     /*
      * This is a readonly data structure for quickly loading an OpenHashMap<IndexType, std::string> from disk
      */
-    template<typename IndexType, typename HashFunction = std::hash<IndexType>>
+    template<typename IndexType, template<typename> typename HashFunction = std::hash>
     class MMapI2SOpenHashMap {
         size_t const *valueOffsets = nullptr;
         IndexType const * keys = nullptr;
@@ -53,7 +53,7 @@ namespace gradylib {
         int fd = -1;
         void * memoryMapping = nullptr;
         size_t mappingSize = 0;
-        HashFunction hashFunction = HashFunction{};
+        HashFunction<IndexType> hashFunction = HashFunction<IndexType>{};
 
         std::string_view getValue(std::byte const * ptr) const {
             int32_t len = *static_cast<int32_t const *>(static_cast<void const *>(ptr));

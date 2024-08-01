@@ -37,18 +37,18 @@ SOFTWARE.
 #include<ParallelTraversals.hpp>
 
 namespace gradylib {
-    template<typename Key, typename Value, typename HashFunction = std::hash<Key>>
+    template<typename Key, typename Value, template<typename> typename HashFunction = std::hash>
     requires std::is_default_constructible_v<Key> && std::is_default_constructible_v<Value>
     class OpenHashMap;
 
-    template<typename Key, typename Value, typename HashFunction>
+    template<typename Key, typename Value, template<typename> typename HashFunction>
     void mergePartials(OpenHashMap<Key, Value, HashFunction> & m1, OpenHashMap<Key, Value, HashFunction> const & m2) {
         for (auto const & [key, value] : m2) {
             m1[key] = value;
         }
     }
 
-    template<typename Key, typename Value, typename HashFunction>
+    template<typename Key, typename Value, template<typename> typename HashFunction>
     requires std::is_default_constructible_v<Key> && std::is_default_constructible_v<Value>
     class OpenHashMap {
 
@@ -58,7 +58,7 @@ namespace gradylib {
         double loadFactor = 0.8;
         double growthFactor = 1.2;
         size_t mapSize = 0;
-        HashFunction hashFunction = HashFunction{};
+        HashFunction<Key> hashFunction = HashFunction<Key>{};
 
         void rehash(size_t size = 0) {
             size_t newSize;

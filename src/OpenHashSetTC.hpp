@@ -63,7 +63,7 @@ SOFTWARE.
 
 namespace gradylib {
 
-    template<typename Key, typename HashFunction = std::hash<Key>>
+    template<typename Key, template<typename> typename HashFunction = std::hash>
     requires std::is_trivially_copyable_v<Key> && std::is_default_constructible_v<Key>
     class OpenHashSetTC {
 
@@ -77,7 +77,7 @@ namespace gradylib {
         size_t mappingSize = 0;
         void *memoryMapping = nullptr;
         bool readOnly = false;
-        HashFunction hashFunction = HashFunction{};
+        HashFunction<Key> hashFunction = HashFunction<Key>{};
 
         void rehash(size_t size = 0) {
             size_t newSize;

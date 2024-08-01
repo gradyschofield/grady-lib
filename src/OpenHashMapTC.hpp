@@ -39,7 +39,7 @@ SOFTWARE.
 
 namespace gradylib {
 
-    template<typename Key, typename Value, typename HashFunction = std::hash<Key>>
+    template<typename Key, typename Value, template<typename> typename HashFunction = std::hash>
     requires std::is_trivially_copyable_v<Key> &&
              std::is_trivially_copyable_v<Value> &&
              std::is_default_constructible_v<Key> &&
@@ -54,7 +54,7 @@ namespace gradylib {
         int fd = -1;
         void * memoryMapping = nullptr;
         size_t mappingSize = 0;
-        HashFunction hashFunction = HashFunction{};
+        HashFunction<Key> hashFunction = HashFunction<Key>{};
         BitPairSet setFlags;
         bool readOnly = false;
 

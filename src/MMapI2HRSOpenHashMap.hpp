@@ -40,7 +40,7 @@ SOFTWARE.
 
 namespace gradylib {
 
-    template<typename IndexType, typename IntermediateIndexType = uint32_t, typename HashFunction = std::hash<IndexType>>
+    template<typename IndexType, typename IntermediateIndexType = uint32_t, template<typename> typename HashFunction = std::hash>
     requires std::is_integral_v<IndexType> && std::is_integral_v<IntermediateIndexType>
     class MMapI2HRSOpenHashMap {
         OpenHashMapTC<IndexType, IntermediateIndexType, HashFunction> intMap;
