@@ -78,7 +78,7 @@ namespace gradylib {
                     if (!setFlags.isFirstSet(i)) {
                         continue;
                     }
-                    Key const &k = keys[i];
+                    Key & k = keys[i];
                     size_t hash = hashFunction(k);
                     size_t idx = hash % newKeys.size();
                     while (newSetFlags.isFirstSet(idx)) {
@@ -86,8 +86,8 @@ namespace gradylib {
                         idx = idx == newKeys.size() ? 0 : idx;
                     }
                     newSetFlags.setBoth(idx);
-                    newKeys[idx] = k;
-                    newValues[idx] = values[i];
+                    newKeys[idx] = std::move(k);
+                    newValues[idx] = std::move(values[i]);
                 }
             }
             std::swap(keys, newKeys);
