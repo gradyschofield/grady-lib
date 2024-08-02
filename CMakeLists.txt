@@ -10,16 +10,16 @@ set(CMAKE_CXX_FLAGS_PROFILE "-O3 -p")
 include_directories(src/)
 
 set(SRC
-        src/AltIntHash.hpp
-        src/BitPairSet.hpp
-        src/MMapI2HRSOpenHashMap.hpp
-        src/MMapI2SOpenHashMap.hpp
-        src/MMapS2IOpenHashMap.hpp
-        src/OpenHashMap.hpp
-        src/OpenHashMapTC.hpp
-        src/OpenHashSetTC.hpp
-        src/ThreadPool.hpp
-        src/ParallelTraversals.hpp
+        src/gradylib/AltIntHash.hpp
+        src/gradylib/BitPairSet.hpp
+        src/gradylib/MMapI2HRSOpenHashMap.hpp
+        src/gradylib/MMapI2SOpenHashMap.hpp
+        src/gradylib/MMapS2IOpenHashMap.hpp
+        src/gradylib/OpenHashMap.hpp
+        src/gradylib/OpenHashMapTC.hpp
+        src/gradylib/OpenHashSetTC.hpp
+        src/gradylib/ThreadPool.hpp
+        src/gradylib/ParallelTraversals.hpp
 )
 
 add_executable(testOpenHashSetTC ${SRC} src/test/TestOpenHashSetTC.cpp)

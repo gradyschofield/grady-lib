@@ -35,7 +35,7 @@ SOFTWARE.
 #include<type_traits>
 #include<vector>
 
-#include<BitPairSet.hpp>
+#include"BitPairSet.hpp"
 
 namespace gradylib {
 

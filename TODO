@@ -1,5 +1,5 @@
 const operator[]s
-Just pass std::hash as third template parameter in maps.  Don't require std::hash<IndexType>
+template all the methods that take keys use convertible_to in requires
 MMapI2HRSOpenHashMap
     - copy/move constructors/assignments
 Constructors on everything that take growth/load factor arguments
@@ -10,5 +10,4 @@ Implement COW for mmap'd OpenHashSetTC
 Implement COW for mmap'd OpenHashMapTC
 Implement clone in MMapI2sOpenHashMap
 Implement clone in MMapS2IOpenHashMap
-Remove AltIntHash
 Very thorough testing

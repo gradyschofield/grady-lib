@@ -31,10 +31,10 @@ SOFTWARE.
 #include<type_traits>
 #include<vector>
 
-#include<Common.hpp>
-#include<BitPairSet.hpp>
-#include<ThreadPool.hpp>
-#include<ParallelTraversals.hpp>
+#include"Common.hpp"
+#include"BitPairSet.hpp"
+#include"ThreadPool.hpp"
+#include"ParallelTraversals.hpp"
 
 namespace gradylib {
     template<typename Key, typename Value, template<typename> typename HashFunction = std::hash>
@@ -105,6 +105,7 @@ namespace gradylib {
         }
 
         template<typename KeyType>
+        requires std::is_convertible_v<std::decay_t<KeyType>, Key>
         Value &operator[](KeyType && key) {
             size_t hash = 0;
             size_t idx = 0;

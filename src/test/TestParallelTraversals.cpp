@@ -2,8 +2,8 @@
 // Created by Grady Schofield on 7/27/24.
 //
 
-#include<AltIntHash.hpp>
-#include<OpenHashMap.hpp>
+#include"gradylib/AltIntHash.hpp"
+#include"gradylib/OpenHashMap.hpp"
 
 using namespace gradylib;
 using namespace std;

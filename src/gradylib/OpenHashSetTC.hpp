@@ -57,9 +57,10 @@ SOFTWARE.
 #include<filesystem>
 #include<fstream>
 #include<type_traits>
+#include<utility>
 #include<vector>
 
-#include<BitPairSet.hpp>
+#include"BitPairSet.hpp"
 
 namespace gradylib {
 
@@ -124,7 +125,7 @@ namespace gradylib {
         }
 
         OpenHashSetTC(OpenHashSetTC &&s)
-                : keys(s.keys), keySize(s.keySize), setFlags(move(s.setFlags)), loadFactor(s.loadFactor),
+                : keys(s.keys), keySize(s.keySize), setFlags(std::move(s.setFlags)), loadFactor(s.loadFactor),
                   growthFactor(s.growthFactor), setSize(s.setSize) {
             s.keys = nullptr;
             s.keySize = 0;

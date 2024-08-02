@@ -6,7 +6,7 @@
 #include<sstream>
 #include<unordered_set>
 
-#include<ThreadPool.hpp>
+#include"gradylib/ThreadPool.hpp"
 
 using namespace std;
 using namespace gradylib;

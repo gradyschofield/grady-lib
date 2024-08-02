@@ -5,9 +5,9 @@
 #include<string>
 #include<unordered_map>
 
-#include<AltIntHash.hpp>
-#include<MMapI2HRSOpenHashMap.hpp>
-#include<OpenHashMap.hpp>
+#include"gradylib/AltIntHash.hpp"
+#include"gradylib/MMapI2HRSOpenHashMap.hpp"
+#include"gradylib/OpenHashMap.hpp"
 
 using namespace std;
 using namespace gradylib;

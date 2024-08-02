@@ -7,10 +7,10 @@
 #include<unordered_map>
 #include<unordered_set>
 
-#include<AltIntHash.hpp>
-#include<OpenHashMap.hpp>
-#include<MMapS2IOpenHashMap.hpp>
-#include<MMapI2SOpenHashMap.hpp>
+#include"gradylib/AltIntHash.hpp"
+#include"gradylib/OpenHashMap.hpp"
+#include"gradylib/MMapS2IOpenHashMap.hpp"
+#include"gradylib/MMapI2SOpenHashMap.hpp"
 
 using namespace std;
 

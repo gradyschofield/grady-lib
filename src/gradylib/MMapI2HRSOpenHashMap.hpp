@@ -35,8 +35,8 @@ SOFTWARE.
 #include<string_view>
 #include<type_traits>
 
-#include<OpenHashMap.hpp>
-#include<OpenHashMapTC.hpp>
+#include"OpenHashMap.hpp"
+#include"OpenHashMapTC.hpp"
 
 namespace gradylib {
 
