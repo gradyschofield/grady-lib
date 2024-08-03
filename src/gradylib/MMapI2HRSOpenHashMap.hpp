@@ -111,7 +111,8 @@ namespace gradylib {
             }
 
             template<typename StringType>
-            requires std::is_same_v<std::decay_t<StringType>, std::string>
+            requires std::is_same_v<std::remove_reference_t<StringType>, std::string> ||
+                     std::is_convertible_v<std::remove_reference_t<StringType>, std::string>
             void put(IndexType idx, StringType &&str) {
                 IntermediateIndexType strIdx = 0;
                 if (!stringMap.contains(str)) {

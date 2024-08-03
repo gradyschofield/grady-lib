@@ -42,7 +42,7 @@ int main() {
             s = randString();
         }
         strs.put(s, 1);
-        strArray.push_back(move(s));
+        strArray.push_back(std::move(s));
     }
 
     b.reserve(numInts);

@@ -105,7 +105,8 @@ namespace gradylib {
         }
 
         template<typename KeyType>
-        requires std::is_convertible_v<std::decay_t<KeyType>, Key>
+        requires std::is_same_v<std::remove_reference_t<KeyType>, Key> ||
+                 std::is_convertible_v<std::remove_reference_t<KeyType>, Key>
         Value &operator[](KeyType && key) {
             size_t hash = 0;
             size_t idx = 0;
@@ -152,7 +153,9 @@ namespace gradylib {
         }
 
         template<typename KeyType, typename ValueType>
-        requires std::is_convertible_v<std::decay_t<KeyType>, Key> && std::is_same_v<std::decay_t<ValueType>, Value>
+        requires (std::is_same_v<std::remove_reference_t<KeyType>, Key> ||
+                  std::is_convertible_v<std::remove_reference_t<KeyType>, Key>) &&
+                  std::is_same_v<std::remove_const_t<std::remove_reference_t<ValueType>>, Value>
         void put(KeyType && key, ValueType && value) {
             size_t hash = 0;
             size_t idx = 0;
