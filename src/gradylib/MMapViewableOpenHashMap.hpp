@@ -33,8 +33,8 @@ SOFTWARE.
 #include<fstream>
 #include<string>
 
-#include<OpenHashMap.hpp>
-#include<OpenHashMapTC.hpp>
+#include"OpenHashMap.hpp"
+#include"OpenHashMapTC.hpp"
 
 namespace gradylib {
 
