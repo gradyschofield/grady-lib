@@ -94,10 +94,13 @@ namespace gradylib {
             setSize = s.setSize;
         }
 
-        BitPairSet(void *memoryMapping)
+        BitPairSet(void const * memoryMapping)
                 : underlying(
-                static_cast<UnderlyingInt *>(static_cast<void *>(8 + static_cast<std::byte *>(memoryMapping)))),
-                  setSize(*static_cast<size_t *>(memoryMapping)),
+                static_cast<UnderlyingInt *>(
+                        const_cast<void *>(
+                                static_cast<void const *>(
+                                        8 + static_cast<std::byte const *>(memoryMapping))))),
+                  setSize(*static_cast<size_t const *>(memoryMapping)),
                   readOnly(true) {
         }
 
