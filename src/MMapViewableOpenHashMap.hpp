@@ -30,6 +30,7 @@ SOFTWARE.
 #include<string>
 
 #include<OpenHashMap.hpp>
+#include<OpenHashMapTC.hpp>
 
 namespace gradylib {
     template<typename ValueType>
@@ -54,12 +55,18 @@ namespace gradylib {
 
     template<typename Key, typename Value, template<typename> typename HashFunction = std::hash>
     class MMapViewableOpenHashMap {
+        OpenHashMapTC<Key, int64_t> valueOffsets;
+        void const * valuePtr;
         HashFunction<Key> hashFunction = HashFunction<Key>{};
 
     public:
 
+        MMapViewableOpenHashMap(std::string filename) {
+            
+        }
+
         class Builder {
-            OpenHashMap<Key, Value, HashFunction> m;
+            OpenHashMapTC<Key, Value, HashFunction> m;
 
         public:
             template<typename KeyType, typename ValueType>
@@ -71,8 +78,37 @@ namespace gradylib {
                 m.put(std::forward<KeyType>(key), std::forward<ValueType>(value));
             }
 
-            void write(std::string filename) {
+            void write(std::string filename, int alignment = alignof(void*)) {
+                auto writePad = [pad=std::vector<char>(alignment, 0)](std::ofstream & ofs, int alignment) {
+                    int64_t pos = ofs.tellp();
+                    int padLength = alignment - pos % alignment;
+                    if (padLength == alignment) {
+                        return;
+                    }
+                    ofs.write(pad.data(), padLength);
+                };
+                std::ofstream ofs(filename, std::ios::binary);
+                if (ofs.fail()) {
+                    std::cout << "Unable to open file for writing " << filename << "\n";
+                    exit(1);
+                }
+                int64_t mapOffset = 0;
+                ofs.write(static_cast<char *>(static_cast<void*>(&mapOffset)), 8);
+                OpenHashMapTC<Key, int64_t> valueOffsets;
+                for (auto const & [key, value] : m) {
+                    valueOffsets[key] = ofs.tellp();
+                    if constexpr (serializable_global<Value>) {
+                        serialize(ofs, value);
+                    } else {
+                        value.serialize(ofs);
+                    }
+                    writePad(ofs);
+                }
+                mapOffset = ofs.tellp();
+                valueOffsets.write(ofs, alignment);
 
+                ofs.seekp(0, std::ios::beg);
+                ofs.write(static_cast<char *>(static_cast<void*>(&mapOffset)), 8);
             }
         };
     };
