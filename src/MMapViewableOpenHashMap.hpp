@@ -93,6 +93,10 @@ namespace gradylib {
             return valueOffsets.contains(key);
         }
 
+        size_t size() const {
+            return valueOffsets.size();
+        }
+
         decltype(auto) at(Key const & key) const {
             if (!valueOffsets.contains(key)) {
                 std::cout << "Map doesn't contain key\n";
@@ -125,6 +129,14 @@ namespace gradylib {
                 std::is_same_v<std::remove_const_t<std::remove_reference_t<ValueType>>, Value>
             void put(KeyType && key, ValueType && value) {
                 m.put(std::forward<KeyType>(key), std::forward<ValueType>(value));
+            }
+
+            void reserve(size_t size) {
+                m.reserve(size);
+            }
+
+            size_t size() const {
+                return m.size();
             }
 
             void write(std::string filename, int alignment = alignof(void*)) {
