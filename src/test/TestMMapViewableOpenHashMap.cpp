@@ -97,5 +97,9 @@ int main( ) {
             exit(1);
         }
     }
+
+    for (auto const & [key, value] : dz2) {
+        cout << key << "\n";
+    }
     return 0;
 }

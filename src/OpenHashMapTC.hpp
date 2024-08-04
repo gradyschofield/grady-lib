@@ -461,6 +461,61 @@ namespace gradylib {
             return iterator(keySize, this);
         }
 
+        class const_iterator {
+            size_t idx;
+            OpenHashMapTC const *container;
+        public:
+            const_iterator(size_t idx, OpenHashMapTC const *container)
+                    : idx(idx), container(container) {
+            }
+
+            bool operator==(const_iterator const &other) const {
+                return idx == other.idx && container == other.container;
+            }
+
+            bool operator!=(const_iterator const &other) const {
+                return idx != other.idx || container != other.container;
+            }
+
+            const std::pair<Key const &, Value const &> operator*() const {
+                return {container->keys[idx], container->values[idx]};
+            }
+
+            Key const &key() const {
+                return container->keys[idx];
+            }
+
+            Value const & value() const {
+                return container->values[idx];
+            }
+
+            const_iterator &operator++() {
+                if (idx == container->keySize) {
+                    return *this;
+                }
+                ++idx;
+                while (idx < container->keySize && !container->setFlags.isFirstSet(idx)) {
+                    ++idx;
+                }
+                return *this;
+            }
+        };
+
+        const_iterator begin() const {
+            if (mapSize == 0) {
+                return const_iterator(keySize, this);
+            }
+            size_t idx = 0;
+            while (idx < keySize && !setFlags.isFirstSet(idx)) {
+                ++idx;
+            }
+            return const_iterator(idx, this);
+        }
+
+        const_iterator end() const {
+            return const_iterator(keySize, this);
+        }
+
         size_t size() const {
             return mapSize;
         }

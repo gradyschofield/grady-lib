@@ -62,12 +62,11 @@ namespace gradylib {
     requires (serializable_global<Value> || serializable_method<Value>) &&
              (viewable_global<Value> || viewable_method<Value>)
     class MMapViewableOpenHashMap {
-        OpenHashMapTC<Key, int64_t> valueOffsets;
+        OpenHashMapTC<Key, int64_t, HashFunction> valueOffsets;
         std::byte const * valuePtr = nullptr;
         int fd = -1;
         size_t mappingSize = 0;
         void const * memoryMapping = nullptr;
-        HashFunction<Key> hashFunction = HashFunction<Key>{};
 
     public:
 
@@ -118,6 +117,51 @@ namespace gradylib {
             }
         }
 
+        class const_iterator {
+            OpenHashMapTC<Key, int64_t, HashFunction>::const_iterator iter;
+            MMapViewableOpenHashMap const *container;
+        public:
+            const_iterator(OpenHashMapTC<Key, int64_t, HashFunction>::const_iterator && iter, MMapViewableOpenHashMap const * container)
+                    : iter(std::move(iter)), container(container) {
+            }
+
+            bool operator==(const_iterator const &other) const {
+                return iter == other.iter && container == other.container;
+            }
+
+            bool operator!=(const_iterator const &other) const {
+                return iter != other.iter || container != other.container;
+            }
+
+            const std::pair<Key const &, decltype(container->at(std::declval<Key const &>())) const &> operator*() {
+                return {iter.key(), container->at(iter.key())};
+            }
+
+            Key const &key() const {
+                return iter.key();
+            }
+
+            Value &value() {
+                return container->at(iter.key());
+            }
+
+            const_iterator &operator++() {
+                if (iter == container->valueOffsets.end()) {
+                    return *this;
+                }
+                ++iter;
+                return *this;
+            }
+        };
+
+        const_iterator begin() const {
+            return const_iterator(std::move(valueOffsets.begin()), this);
+        }
+
+        const_iterator end() const {
+            return const_iterator(valueOffsets.end(), this);
+        }
+
         class Builder {
             OpenHashMap<Key, Value, HashFunction> m;
 
@@ -155,7 +199,7 @@ namespace gradylib {
                 }
                 int64_t mapOffset = 0;
                 ofs.write(static_cast<char *>(static_cast<void*>(&mapOffset)), 8);
-                OpenHashMapTC<Key, int64_t> valueOffsets;
+                OpenHashMapTC<Key, int64_t, HashFunction> valueOffsets;
                 auto valueStartOffset = ofs.tellp();
                 for (auto const & [key, value] : m) {
                     valueOffsets[key] = ofs.tellp() - valueStartOffset;
