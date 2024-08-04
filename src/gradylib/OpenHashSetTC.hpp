@@ -307,27 +307,27 @@ namespace gradylib {
             rehash(size);
         }
 
-        class iterator {
+        class const_iterator {
             size_t idx;
-            OpenHashSetTC *container;
+            OpenHashSetTC const * container;
         public:
-            iterator(size_t idx, OpenHashSetTC *container)
+            const_iterator(size_t idx, OpenHashSetTC const *container)
                     : idx(idx), container(container) {
             }
 
-            bool operator==(iterator const &other) const {
+            bool operator==(const_iterator const &other) const {
                 return idx == other.idx && container == other.container;
             }
 
-            bool operator!=(iterator const &other) const {
+            bool operator!=(const_iterator const &other) const {
                 return idx != other.idx || container != other.container;
             }
 
-            Key const &operator*() const {
+            Key const & operator*() const {
                 return container->keys[idx];
             }
 
-            iterator &operator++() {
+            const_iterator & operator++() {
                 if (idx == container->keySize) {
                     return *this;
                 }
@@ -339,19 +339,19 @@ namespace gradylib {
             }
         };
 
-        iterator begin() {
+        const_iterator begin() const {
             if (setSize == 0) {
-                return iterator(keySize, this);
+                return const_iterator(keySize, this);
             }
             size_t idx = 0;
             while (idx < keySize && !setFlags.isFirstSet(idx)) {
                 ++idx;
             }
-            return iterator(idx, this);
+            return const_iterator(idx, this);
         }
 
-        iterator end() {
-            return iterator(keySize, this);
+        const_iterator end() const {
+            return const_iterator(keySize, this);
         }
 
         size_t size() const {

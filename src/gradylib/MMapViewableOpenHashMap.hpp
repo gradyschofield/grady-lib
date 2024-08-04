@@ -123,8 +123,8 @@ namespace gradylib {
             OpenHashMapTC<Key, int64_t, HashFunction>::const_iterator iter;
             MMapViewableOpenHashMap const *container;
         public:
-            const_iterator(OpenHashMapTC<Key, int64_t, HashFunction>::const_iterator && iter, MMapViewableOpenHashMap const * container)
-                    : iter(std::move(iter)), container(container) {
+            const_iterator(OpenHashMapTC<Key, int64_t, HashFunction>::const_iterator iter, MMapViewableOpenHashMap const * container)
+                    : iter(iter), container(container) {
             }
 
             bool operator==(const_iterator const &other) const {
@@ -157,7 +157,7 @@ namespace gradylib {
         };
 
         const_iterator begin() const {
-            return const_iterator(std::move(valueOffsets.begin()), this);
+            return const_iterator(valueOffsets.begin(), this);
         }
 
         const_iterator end() const {

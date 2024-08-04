@@ -184,6 +184,53 @@ namespace gradylib {
                 strings.clear();
             }
         };
+
+        class const_iterator {
+            OpenHashMapTC<IndexType, IntermediateIndexType, HashFunction>::const_iterator iter;
+            MMapI2HRSOpenHashMap const *container;
+        public:
+
+            const_iterator(OpenHashMapTC<IndexType, IntermediateIndexType, HashFunction>::const_iterator iter, MMapI2HRSOpenHashMap const * container)
+                    : iter(iter), container(container) {
+            }
+
+            bool operator==(const_iterator const &other) const {
+                return iter == other.iter && container == other.container;
+            }
+
+            bool operator!=(const_iterator const &other) const {
+                return iter != other.iter || container != other.container;
+            }
+
+            const std::pair<IndexType, std::string_view> operator*() {
+                return {iter.key(), container->at(iter.key())};
+            }
+
+            IndexType key() const {
+                return iter.key();
+            }
+
+            std::string_view value() {
+                return container->at(iter.key());
+            }
+
+            const_iterator &operator++() {
+                if (iter == container->valueOffsets.end()) {
+                    return *this;
+                }
+                ++iter;
+                return *this;
+            }
+        };
+
+        const_iterator begin() const {
+            return const_iterator(intMap.begin(), this);
+        }
+
+        const_iterator end() const {
+            return const_iterator(intMap.end(), this);
+        }
+
     };
 }
 

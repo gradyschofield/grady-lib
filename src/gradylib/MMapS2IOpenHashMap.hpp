@@ -224,23 +224,23 @@ namespace gradylib {
             return mapSize;
         }
 
-        class iterator {
+        class const_iterator {
             size_t idx;
-            MMapS2IOpenHashMap *container;
+            MMapS2IOpenHashMap const * container;
         public:
-            iterator(size_t idx, MMapS2IOpenHashMap *container)
+            const_iterator(size_t idx, MMapS2IOpenHashMap const * container)
                     : idx(idx), container(container) {
             }
 
-            bool operator==(iterator const &other) const {
+            bool operator==(const_iterator const &other) const {
                 return idx == other.idx && container == other.container;
             }
 
-            bool operator!=(iterator const &other) const {
+            bool operator!=(const_iterator const &other) const {
                 return idx != other.idx || container != other.container;
             }
 
-            const std::pair<std::string_view const, IndexType const &> operator*() const {
+            std::pair<std::string_view const, IndexType const &> operator*() const {
                 std::byte const *keyPtr = static_cast<std::byte const *>(container->keys) + container->keyOffsets[idx];
                 return {container->getKey(keyPtr), container->values[idx]};
             }
@@ -254,7 +254,7 @@ namespace gradylib {
                 return container->values[idx];
             }
 
-            iterator &operator++() {
+            const_iterator &operator++() {
                 if (idx == container->keySize) {
                     return *this;
                 }
@@ -266,19 +266,19 @@ namespace gradylib {
             }
         };
 
-        iterator begin() {
+        const_iterator begin() const {
             if (mapSize == 0) {
-                return iterator(keySize, this);
+                return const_iterator(keySize, this);
             }
             size_t idx = 0;
             while (idx < keySize && !setFlags.isFirstSet(idx)) {
                 ++idx;
             }
-            return iterator(idx, this);
+            return const_iterator(idx, this);
         }
 
-        iterator end() {
-            return iterator(keySize, this);
+        const_iterator end() const {
+            return const_iterator(keySize, this);
         }
 
         OpenHashMap<std::string, IndexType> clone() const {

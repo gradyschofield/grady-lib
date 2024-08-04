@@ -32,7 +32,7 @@ struct A {
 template<typename Z>
 requires std::is_same_v<decay_t<Z>, A>
 void func(Z && s) {
-    A x = forward<Z>(s);
+    A x = std::forward<Z>(s);
     cout << x.x << "\n";
 }
 
