@@ -52,7 +52,7 @@ namespace gradylib {
         double loadFactor = 0.8;
         double growthFactor = 1.2;
         int fd = -1;
-        void * memoryMapping = nullptr;
+        void const * memoryMapping = nullptr;
         size_t mappingSize = 0;
         HashFunction<Key> hashFunction = HashFunction<Key>{};
         BitPairSet setFlags;
@@ -94,25 +94,25 @@ namespace gradylib {
             std::swap(setFlags, newSetFlags);
         }
 
-        void setFromMemoryMapping(void *startPtr) {
+        void setFromMemoryMapping(void const * startPtr) {
             readOnly = true;
-            std::byte *ptr = static_cast<std::byte *>(startPtr);
-            std::byte *base = ptr;
-            mapSize = *static_cast<size_t*>(static_cast<void*>(ptr));
+            std::byte const *ptr = static_cast<std::byte const *>(startPtr);
+            std::byte const *base = ptr;
+            mapSize = *static_cast<size_t const *>(static_cast<void const *>(ptr));
             ptr += 8;
-            keySize = *static_cast<size_t*>(static_cast<void*>(ptr));
+            keySize = *static_cast<size_t const *>(static_cast<void const *>(ptr));
             ptr += 8;
-            loadFactor = *static_cast<double*>(static_cast<void*>(ptr));
+            loadFactor = *static_cast<double const *>(static_cast<void const *>(ptr));
             ptr += 8;
-            growthFactor = *static_cast<double*>(static_cast<void*>(ptr));
+            growthFactor = *static_cast<double const *>(static_cast<void const *>(ptr));
             ptr += 8;
-            size_t valueOffset = *static_cast<size_t*>(static_cast<void*>(ptr));
+            size_t valueOffset = *static_cast<size_t const *>(static_cast<void const *>(ptr));
             ptr += 8;
-            size_t bitPairSetOffset = *static_cast<size_t*>(static_cast<void*>(ptr));
+            size_t bitPairSetOffset = *static_cast<size_t const *>(static_cast<void const *>(ptr));
             ptr += 8;
-            keys = static_cast<Key*>(static_cast<void*>(ptr));
+            keys = static_cast<Key *>(const_cast<void *>(static_cast<void const *>(ptr)));
             ptr = base + valueOffset;
-            values = static_cast<Value*>(static_cast<void*>(ptr));
+            values = static_cast<Value *>(const_cast<void *>(static_cast<void const *>(ptr)));
             ptr = base + bitPairSetOffset;
             setFlags = BitPairSet(ptr);
         }
@@ -199,7 +199,7 @@ namespace gradylib {
 
         ~OpenHashMapTC() {
             if (memoryMapping) {
-                munmap(memoryMapping, mappingSize);
+                munmap(const_cast<void *>(memoryMapping), mappingSize);
                 close(fd);
             } else if (!readOnly) {
                 delete [] keys;
@@ -222,7 +222,7 @@ namespace gradylib {
             setFromMemoryMapping(memoryMapping);
         }
 
-        explicit OpenHashMapTC(void * startPtr) {
+        explicit OpenHashMapTC(void const * startPtr) {
             setFromMemoryMapping(startPtr);
         }
 
