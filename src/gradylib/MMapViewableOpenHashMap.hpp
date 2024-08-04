@@ -76,12 +76,14 @@ namespace gradylib {
                 std::cout << "Error opening file " << filename << "\n";
                 exit(1);
             }
+
             mappingSize = std::filesystem::file_size(filename);
             memoryMapping = mmap(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
             if (memoryMapping == MAP_FAILED) {
                 std::cout << "memory map failed: " << strerror(errno) << "\n";
                 exit(1);
             }
+
             std::byte const * base = static_cast<std::byte const *>(memoryMapping);
             size_t mapOffset = *static_cast<size_t const *>(static_cast<void const *>(base));
             valuePtr = base + 8;
@@ -168,9 +170,9 @@ namespace gradylib {
         public:
             template<typename KeyType, typename ValueType>
             requires (serializable_global<ValueType> || serializable_method<ValueType>) &&
-                (viewable_global<ValueType> || viewable_method<ValueType>) &&
-                (std::is_same_v<std::remove_reference_t<KeyType>, Key> || std::is_convertible_v<std::remove_reference_t<KeyType>, Key>) &&
-                std::is_same_v<std::remove_const_t<std::remove_reference_t<ValueType>>, Value>
+                    (viewable_global<ValueType> || viewable_method<ValueType>) &&
+                    (std::is_same_v<std::remove_reference_t<KeyType>, Key> || std::is_convertible_v<std::remove_reference_t<KeyType>, Key>) &&
+                    std::is_same_v<std::remove_const_t<std::remove_reference_t<ValueType>>, Value>
             void put(KeyType && key, ValueType && value) {
                 m.put(std::forward<KeyType>(key), std::forward<ValueType>(value));
             }
@@ -184,6 +186,7 @@ namespace gradylib {
             }
 
             void write(std::string filename, int alignment = alignof(void*)) {
+
                 auto writePad = [pad=std::vector<char>(alignment, 0)](std::ofstream & ofs, int alignment) {
                     int64_t pos = ofs.tellp();
                     int padLength = alignment - pos % alignment;
@@ -192,13 +195,16 @@ namespace gradylib {
                     }
                     ofs.write(pad.data(), padLength);
                 };
+
                 std::ofstream ofs(filename, std::ios::binary);
                 if (ofs.fail()) {
                     std::cout << "Unable to open file for writing " << filename << "\n";
                     exit(1);
                 }
+
                 int64_t mapOffset = 0;
                 ofs.write(static_cast<char *>(static_cast<void*>(&mapOffset)), 8);
+
                 OpenHashMapTC<Key, int64_t, HashFunction> valueOffsets;
                 auto valueStartOffset = ofs.tellp();
                 for (auto const & [key, value] : m) {
@@ -210,6 +216,7 @@ namespace gradylib {
                     }
                     writePad(ofs, alignment);
                 }
+
                 mapOffset = ofs.tellp();
                 valueOffsets.write(ofs, alignment);
 
