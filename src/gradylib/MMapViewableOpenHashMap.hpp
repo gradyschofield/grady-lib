@@ -135,7 +135,7 @@ namespace gradylib {
                 return iter != other.iter || container != other.container;
             }
 
-            const std::pair<Key const &, decltype(container->at(std::declval<Key const &>())) const &> operator*() {
+            std::pair<Key const &, decltype(container->at(std::declval<Key const &>()))> operator*() {
                 return {iter.key(), container->at(iter.key())};
             }
 
@@ -143,7 +143,7 @@ namespace gradylib {
                 return iter.key();
             }
 
-            Value &value() {
+            Value value() {
                 return container->at(iter.key());
             }
 
@@ -168,6 +168,7 @@ namespace gradylib {
             OpenHashMap<Key, Value, HashFunction> m;
 
         public:
+
             template<typename KeyType, typename ValueType>
             requires (serializable_global<ValueType> || serializable_method<ValueType>) &&
                     (viewable_global<ValueType> || viewable_method<ValueType>) &&
@@ -177,8 +178,20 @@ namespace gradylib {
                 m.put(std::forward<KeyType>(key), std::forward<ValueType>(value));
             }
 
+            template<typename KeyType>
+            requires std::is_same_v<std::remove_reference_t<KeyType>, Key> || std::is_convertible_v<std::remove_reference_t<KeyType>, Key>
+            Value & operator[](KeyType && key) {
+                return m[std::forward<KeyType>(key)];
+            }
+
             void reserve(size_t size) {
                 m.reserve(size);
+            }
+
+            template<typename KeyType>
+            requires std::is_convertible_v<std::remove_reference_t<KeyType>, Key>
+            bool contains(KeyType const & key) const {
+                m.contains(key);
             }
 
             size_t size() const {
@@ -206,6 +219,7 @@ namespace gradylib {
                 ofs.write(static_cast<char *>(static_cast<void*>(&mapOffset)), 8);
 
                 OpenHashMapTC<Key, int64_t, HashFunction> valueOffsets;
+                valueOffsets.reserve(m.size());
                 auto valueStartOffset = ofs.tellp();
                 for (auto const & [key, value] : m) {
                     valueOffsets[key] = ofs.tellp() - valueStartOffset;

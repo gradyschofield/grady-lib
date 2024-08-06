@@ -222,6 +222,11 @@ namespace gradylib {
             setFromMemoryMapping(memoryMapping);
         }
 
+        explicit OpenHashMapTC(char const * startPtr)
+            : OpenHashMapTC(std::string(startPtr))
+        {
+        }
+
         explicit OpenHashMapTC(void const * startPtr) {
             setFromMemoryMapping(startPtr);
         }
