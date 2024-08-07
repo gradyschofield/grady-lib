@@ -191,7 +191,7 @@ namespace gradylib {
             template<typename KeyType>
             requires std::is_convertible_v<std::remove_reference_t<KeyType>, Key>
             bool contains(KeyType const & key) const {
-                m.contains(key);
+                return m.contains(key);
             }
 
             size_t size() const {

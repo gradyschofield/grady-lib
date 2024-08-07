@@ -215,7 +215,7 @@ namespace gradylib {
             }
 
             const_iterator &operator++() {
-                if (iter == container->valueOffsets.end()) {
+                if (iter == container->intMap.end()) {
                     return *this;
                 }
                 ++iter;
