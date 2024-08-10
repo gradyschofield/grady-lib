@@ -12,6 +12,7 @@ include_directories(src/)
 set(SRC
         src/gradylib/AltIntHash.hpp
         src/gradylib/BitPairSet.hpp
+        src/gradylib/CompletionPool.hpp
         src/gradylib/MMapI2HRSOpenHashMap.hpp
         src/gradylib/MMapI2SOpenHashMap.hpp
         src/gradylib/MMapS2IOpenHashMap.hpp
@@ -28,6 +29,7 @@ add_executable(testOpenHashMap ${SRC} src/test/TestOpenHashMap.cpp)
 add_executable(testMMapViewableOpenHashMap ${SRC} src/test/TestMMapViewableOpenHashMap.cpp)
 add_executable(testAlignment ${SRC} src/test/AlignmentStuff.cpp)
 add_executable(perfectForwardStuff ${SRC} src/test/PerfectForwardStuff.cpp)
+add_executable(testCompletionPool ${SRC} src/test/TestCompletionPool.cpp)
 add_executable(testMMapI2HRSOpenHashMap ${SRC} src/test/TestMMapI2HRSOpenHashMap.cpp)
 add_executable(testParallelMapOperation ${SRC} src/test/TestParallelMapOperation.cpp)
 add_executable(threadPoolTest ${SRC} src/test/ThreadPoolTest.cpp)
