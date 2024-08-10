@@ -22,7 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#pragma once
+#ifndef GRADY_LIB_COMPLETION_POOL_HPP
+#define GRADY_LIB_COMPLETION_POOL_HPP
 
 #include<atomic>
 #include<utility>
@@ -31,7 +32,10 @@ template<typename T>
 class CompletionPool {
     struct Node {
         T t;
-        Node * next = nullptr;
+        Node *next = nullptr;
+
+        Node(T && t) : t(std::move(t)) {}
+        Node(T const &t) : t(t) {}
     };
 
     std::atomic<Node*> head;
@@ -42,10 +46,20 @@ public:
     {
     }
 
-    void add(T && t) {
-        Node * n = new Node(std::move(t));
-        n->next = head.load(std::memory_order_relaxed);
-        Node * expected = n->next;
+    ~CompletionPool() {
+        Node * n = head;
+        while (n) {
+            Node * next = n->next;
+            delete n;
+            n = next;
+        }
+    }
+
+    template<typename U>
+    requires std::same_as<std::remove_cvref_t<U>, T>
+    void add(U && t) {
+        Node * n = new Node(std::forward<U>(t));
+        Node * expected = n->next = head.load(std::memory_order_relaxed);
         while(!head.compare_exchange_strong(expected, n, std::memory_order_release, std::memory_order_relaxed)) {
             n->next = expected;
         }
@@ -60,11 +74,11 @@ public:
         }
 
         bool operator==(iterator const &other) const {
-            return n == other->n;
+            return n == other.n;
         }
 
         bool operator!=(iterator const &other) const {
-            return n != other->n;
+            return n != other.n;
         }
 
         T & operator*() {
@@ -88,3 +102,5 @@ public:
         return iterator(nullptr);
     }
 };
+
+#endif
