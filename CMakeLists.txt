@@ -32,8 +32,12 @@ set(SRC
         src/gradylib/OpenHashSetTC.hpp
         src/gradylib/ThreadPool.hpp
         src/gradylib/ParallelTraversals.hpp
+
+        src/gradylib/nn/MLP.hpp
+        src/gradylib/nn/Node.hpp
 )
 
+<<<<<<< HEAD
 add_executable(testAlignment ${SRC} src/experiment/AlignmentStuff.cpp)
 add_executable(perfectForwardStuff ${SRC} src/experiment/PerfectForwardStuff.cpp)
 add_executable(testAltIntHash ${SRC} src/experiment/TestAltIntHash.cpp)
@@ -58,3 +62,5 @@ add_executable(allTests ${SRC} ${TEST_SRC})
 target_link_libraries(allTests PRIVATE Catch2 Catch2Main)
 
 add_executable(replaceRegex src/experiment/ReplaceRegex.cpp)
+
+add_executable(testNN ${SRC} src/test/TestNN.cpp)
