@@ -45,13 +45,15 @@ namespace gradylib {
             typedef WeightType weight_type;
             typedef BiasType bias_type;
 
+            /*
             MLP(int numInputs, int numOutputs)
                 : impl(std::make_shared<MLPImpl>(numInputs, numOutputs))
             {
             }
+             */
 
-            MLP(Node const & input, int numOutputs)
-                : impl(std::make_shared<MLPImpl>(input, numOutputs))
+            MLP(Node const & input, Params params)
+                : impl(std::make_shared<MLPImpl>(input, params.getNumOutputs()))
             {
             }
 
