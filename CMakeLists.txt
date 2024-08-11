@@ -21,6 +21,9 @@ set(SRC
         src/gradylib/OpenHashSetTC.hpp
         src/gradylib/ThreadPool.hpp
         src/gradylib/ParallelTraversals.hpp
+
+        src/gradylib/nn/MLP.hpp
+        src/gradylib/nn/Node.hpp
 )
 
 add_executable(testOpenHashSetTC ${SRC} src/test/TestOpenHashSetTC.cpp)
@@ -28,7 +31,10 @@ add_executable(testOpenHashMapTC ${SRC} src/test/TestOpenHashMapTC.cpp)
 add_executable(testOpenHashMap ${SRC} src/test/TestOpenHashMap.cpp)
 add_executable(testMMapViewableOpenHashMap ${SRC} src/test/TestMMapViewableOpenHashMap.cpp)
 add_executable(testAlignment ${SRC} src/test/AlignmentStuff.cpp)
-add_executable(perfectForwardStuff ${SRC} src/test/PerfectForwardStuff.cpp)
+add_executable(perfectForwardStuff ${SRC} src/test/PerfectForwardStuff.cpp
+        src/gradylib/nn/Embedding.hpp
+        src/gradylib/nn/FeatureIndexLookup.hpp)
+add_executable(testNN ${SRC} src/test/TestNN.cpp)
 add_executable(testCompletionPool ${SRC} src/test/TestCompletionPool.cpp)
 add_executable(testMMapI2HRSOpenHashMap ${SRC} src/test/TestMMapI2HRSOpenHashMap.cpp)
 add_executable(testParallelMapOperation ${SRC} src/test/TestParallelMapOperation.cpp)
