@@ -35,9 +35,11 @@ set(SRC
 
         src/gradylib/nn/MLP.hpp
         src/gradylib/nn/Node.hpp
+        src/gradylib/nn/Embedding.hpp
+        src/gradylib/nn/FeatureIndexLookup.hpp
+        src/gradylib/nn/MergeLayer.hpp
 )
 
-<<<<<<< HEAD
 add_executable(testAlignment ${SRC} src/experiment/AlignmentStuff.cpp)
 add_executable(perfectForwardStuff ${SRC} src/experiment/PerfectForwardStuff.cpp)
 add_executable(testAltIntHash ${SRC} src/experiment/TestAltIntHash.cpp)
