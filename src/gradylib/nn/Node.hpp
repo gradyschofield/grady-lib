@@ -9,6 +9,9 @@
 #include<memory>
 #include<vector>
 
+#include<gradylib/nn/TrainingReport.hpp>
+#include<gradylib/nn/TrainingOptions.hpp>
+
 namespace gradylib {
     namespace nn {
 #if 0
@@ -23,6 +26,7 @@ namespace gradylib {
             virtual std::shared_ptr<NodeImpl> getImpl() const = 0;
         public:
             virtual int getNumOutputs() const = 0;
+            virtual TrainingReport train(TrainingOptions const & trainingOptions) = 0;
             virtual ~Node() = default;
 
             friend NodeImpl;

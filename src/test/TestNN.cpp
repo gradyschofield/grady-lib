@@ -6,6 +6,8 @@
 #include<gradylib/nn/FeatureIndexLookup.hpp>
 #include<gradylib/nn/MergeLayer.hpp>
 #include<gradylib/nn/MLP.hpp>
+#include<gradylib/nn/TrainingOptions.hpp>
+#include<gradylib/nn/TrainingReport.hpp>
 
 using namespace gradylib::nn;
 
@@ -22,11 +24,11 @@ int main(int argc, char ** argv) {
     /*
     Target target("modelSpec.json");
 
-    TrainingOptions trainingOptions("modelSpec.json");
-    trainingOptions.setLearningRate(0.01);
 
-    layer3.train(target, trainingOptions);
      */
+    TrainingOptions trainingOptions("modelSpec.json");
+
+    layer4.train(target, trainingOptions);
 
     return 0;
 }

@@ -33,17 +33,20 @@ set(SRC
         src/gradylib/ThreadPool.hpp
         src/gradylib/ParallelTraversals.hpp
 
-        src/gradylib/nn/MLP.hpp
-        src/gradylib/nn/Node.hpp
+        src/gradylib/nn/ComputeBackend.hpp
         src/gradylib/nn/Embedding.hpp
         src/gradylib/nn/FeatureIndexLookup.hpp
         src/gradylib/nn/MergeLayer.hpp
+        src/gradylib/nn/MLP.hpp
+        src/gradylib/nn/Node.hpp
+        src/gradylib/nn/Params.hpp
+        src/gradylib/nn/TrainingOptions.hpp
+        src/gradylib/nn/TrainingReport.hpp
 )
 
 add_executable(testAlignment ${SRC} src/experiment/AlignmentStuff.cpp)
 add_executable(perfectForwardStuff ${SRC} src/experiment/PerfectForwardStuff.cpp)
 add_executable(testAltIntHash ${SRC} src/experiment/TestAltIntHash.cpp)
-
 add_executable(testStringViewKeys ${SRC} src/experiment/TestStringViewKeys.cpp)
 
 set(TEST_SRC
@@ -66,3 +69,4 @@ target_link_libraries(allTests PRIVATE Catch2 Catch2Main)
 add_executable(replaceRegex src/experiment/ReplaceRegex.cpp)
 
 add_executable(testNN ${SRC} src/test/TestNN.cpp)
+add_executable(testNNFeatureIndexer ${SRC} src/test/TestNNFeatureIndexer.cpp)

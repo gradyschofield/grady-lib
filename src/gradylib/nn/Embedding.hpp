@@ -48,6 +48,10 @@ namespace gradylib {
             int getNumOutputs() const override {
                 return impl->getNumOutputs();
             }
+
+            TrainingReport train(TrainingOptions const & trainingOptions) override {
+                throw std::runtime_error("Embedding::train not implemented");
+            }
         };
     }
 }
