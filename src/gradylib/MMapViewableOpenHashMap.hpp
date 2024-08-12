@@ -60,7 +60,9 @@ namespace gradylib {
 
     template<typename Key, typename Value, template<typename> typename HashFunction = std::hash>
     requires (serializable_global<Value> || serializable_method<Value>) &&
-             (viewable_global<Value> || viewable_method<Value>)
+             (viewable_global<Value> || viewable_method<Value>) &&
+             std::is_trivially_copyable_v<Key> &&
+             std::is_default_constructible_v<Key>
     class MMapViewableOpenHashMap {
         OpenHashMapTC<Key, int64_t, HashFunction> valueOffsets;
         std::byte const * valuePtr = nullptr;
@@ -172,8 +174,8 @@ namespace gradylib {
             template<typename KeyType, typename ValueType>
             requires (serializable_global<ValueType> || serializable_method<ValueType>) &&
                     (viewable_global<ValueType> || viewable_method<ValueType>) &&
-                    (std::is_same_v<std::remove_reference_t<KeyType>, Key> || std::is_convertible_v<std::remove_reference_t<KeyType>, Key>) &&
-                    std::is_same_v<std::remove_const_t<std::remove_reference_t<ValueType>>, Value>
+                    (std::is_same_v<std::remove_cvref_t<KeyType>, Key> || std::is_convertible_v<std::remove_cvref_t<KeyType>, Key>) &&
+                    std::is_same_v<std::remove_cvref_t<ValueType>, Value>
             void put(KeyType && key, ValueType && value) {
                 m.put(std::forward<KeyType>(key), std::forward<ValueType>(value));
             }
