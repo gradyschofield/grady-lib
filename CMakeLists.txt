@@ -18,6 +18,7 @@ set(SRC
         src/gradylib/MMapS2IOpenHashMap.hpp
         src/gradylib/OpenHashMap.hpp
         src/gradylib/OpenHashMapTC.hpp
+        src/gradylib/OpenHashSet.hpp
         src/gradylib/OpenHashSetTC.hpp
         src/gradylib/ThreadPool.hpp
         src/gradylib/ParallelTraversals.hpp
