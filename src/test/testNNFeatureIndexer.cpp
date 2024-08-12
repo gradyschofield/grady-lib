@@ -20,7 +20,13 @@ class CsvTrainingFiles;
 class FeatureIndexer;
 class Sample;
 
-typedef std::variant<double, std::vector<double>, int64_t, std::vector<int64_t>, std::string, std::vector<std::string>> Feature;
+typedef std::variant<double,
+        std::vector<double>,
+        int64_t,
+        std::vector<int64_t>,
+        std::string,
+        std::vector<std::string>
+        > Feature;
 
 class Sample {
     OpenHashMap<std::string, Feature> features;
