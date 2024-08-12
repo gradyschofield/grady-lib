@@ -105,8 +105,9 @@ namespace gradylib {
         }
 
         template<typename KeyType>
-        requires std::is_same_v<std::remove_reference_t<KeyType>, Key> ||
-                 std::is_convertible_v<std::remove_reference_t<KeyType>, Key>
+        requires std::is_same_v<std::remove_cvref_t<KeyType>, Key> ||
+                 std::is_convertible_v<Key, std::remove_cvref_t<KeyType>> ||
+                 (std::is_constructible_v<Key, KeyType> && std::is_assignable_v<Key, KeyType>)
         Value &operator[](KeyType && key) {
             size_t hash = 0;
             size_t idx = 0;
@@ -114,7 +115,11 @@ namespace gradylib {
             size_t firstUnsetIdx = -1;
             bool isFirstUnsetIdxSet = false;
             if (!keys.empty()) {
-                hash = hashFunction(key);
+                if constexpr (std::same_as<Key, std::string> && std::same_as<std::remove_cvref_t<KeyType>, std::string_view>) {
+                    hash = HashFunction<std::string_view>{}(key);
+                } else {
+                    hash = hashFunction(key);
+                }
                 idx = hash % keys.size();
                 startIdx = idx;
                 for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
@@ -135,7 +140,11 @@ namespace gradylib {
             }
             if (mapSize >= keys.size() * loadFactor) {
                 rehash();
-                hash = hashFunction(key);
+                if constexpr (std::same_as<Key, std::string> && std::same_as<std::remove_cvref_t<KeyType>, std::string_view>) {
+                    hash = HashFunction<std::string_view>{}(key);
+                } else {
+                    hash = hashFunction(key);
+                }
                 idx = hash % keys.size();
                 startIdx = idx;
                 while (setFlags.isFirstSet(idx)) {
@@ -153,9 +162,10 @@ namespace gradylib {
         }
 
         template<typename KeyType, typename ValueType>
-        requires (std::is_same_v<std::remove_reference_t<KeyType>, Key> ||
-                  std::is_convertible_v<std::remove_reference_t<KeyType>, Key>) &&
-                  std::is_same_v<std::remove_const_t<std::remove_reference_t<ValueType>>, Value>
+        requires (std::is_same_v<std::remove_cvref_t<KeyType>, Key> ||
+                 std::is_convertible_v<Key, std::remove_cvref_t<KeyType>> ||
+                 (std::is_constructible_v<Key, KeyType> && std::is_assignable_v<Key, KeyType>)) &&
+                 std::is_same_v<std::remove_cvref_t<ValueType>, Value>
         void put(KeyType && key, ValueType && value) {
             size_t hash = 0;
             size_t idx = 0;
@@ -164,7 +174,11 @@ namespace gradylib {
             bool isFirstUnsetIdxSet = false;
             size_t startIdx = idx;
             if (keys.size() > 0) {
-                hash = hashFunction(key);
+                if constexpr (std::same_as<Key, std::string> && std::same_as<std::remove_cvref_t<KeyType>, std::string_view>) {
+                    hash = HashFunction<std::string_view>{}(key);
+                } else {
+                    hash = hashFunction(key);
+                }
                 idx = hash % keys.size();
                 startIdx = idx;
                 for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
@@ -191,7 +205,11 @@ namespace gradylib {
             }
             if (mapSize >= keys.size() * loadFactor) {
                 rehash();
-                hash = hashFunction(key);
+                if constexpr (std::same_as<Key, std::string> && std::same_as<std::remove_cvref_t<KeyType>, std::string_view>) {
+                    hash = HashFunction<std::string_view>{}(key);
+                } else {
+                    hash = hashFunction(key);
+                }
                 idx = hash % keys.size();
                 startIdx = idx;
                 while (setFlags.isFirstSet(idx)) {
@@ -208,11 +226,20 @@ namespace gradylib {
             ++mapSize;
         }
 
-        bool contains(Key const &key) const {
+        template<typename KeyType>
+        requires (std::is_convertible_v<Key, std::remove_cvref_t<KeyType>> ||
+                 std::is_constructible_v<Key, KeyType>) &&
+                 equality_comparable<KeyType, Key>
+        bool contains(KeyType const &key) const {
             if (keys.size() == 0) {
                 return false;
             }
-            size_t hash = hashFunction(key);
+            size_t hash;
+            if constexpr (std::same_as<Key, std::string> && std::same_as<std::remove_cvref_t<KeyType>, std::string_view>) {
+                hash = HashFunction<std::string_view>{}(key);
+            } else {
+                hash = hashFunction(key);
+            }
             size_t idx = hash % keys.size();
             size_t startIdx = idx;
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
@@ -229,12 +256,21 @@ namespace gradylib {
             return false;
         }
 
-        Value const & at(Key const &key) const {
+        template<typename KeyType>
+        requires (std::is_constructible_v<Key, KeyType> ||
+                 std::is_convertible_v<Key, std::remove_cvref_t<KeyType>>) &&
+                 equality_comparable<KeyType, Key>
+        Value const & at(KeyType const &key) const {
             if (keys.size() == 0) {
                 std::cout << "OpenHashMap doesn't contain key\n";
                 exit(1);
             }
-            size_t hash = hashFunction(key);
+            size_t hash;
+            if constexpr (std::same_as<Key, std::string> && std::same_as<std::remove_cvref_t<KeyType>, std::string_view>) {
+                hash = HashFunction<std::string_view>{}(key);
+            } else {
+                hash = hashFunction(key);
+            }
             size_t idx = hash % keys.size();
             size_t startIdx = idx;
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
@@ -253,11 +289,20 @@ namespace gradylib {
             exit(1);
         }
 
-        void erase(Key const &key) {
+        template<typename KeyType>
+        requires (std::is_constructible_v<Key, KeyType> ||
+                 std::is_convertible_v<Key, std::remove_cvref_t<KeyType>>) &&
+                 equality_comparable<KeyType, Key>
+        void erase(KeyType const &key) {
             if (keys.empty()) {
                 return;
             }
-            size_t hash = hashFunction(key);
+            size_t hash;
+            if constexpr (std::same_as<Key, std::string> && std::same_as<std::remove_cvref_t<KeyType>, std::string_view>) {
+                hash = HashFunction<std::string_view>{}(key);
+            } else {
+                hash = hashFunction(key);
+            }
             size_t idx = hash % keys.size();
             size_t startIdx = idx;
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {

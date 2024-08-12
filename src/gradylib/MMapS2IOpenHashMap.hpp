@@ -282,7 +282,12 @@ namespace gradylib {
         }
 
         OpenHashMap<std::string, IndexType> clone() const {
-
+            OpenHashMap<std::string, IndexType> ret;
+            ret.reserve(size());
+            for (auto && [sview, idx] : *this) {
+                ret.put(sview, idx);
+            }
+            return ret;
         }
     };
 }

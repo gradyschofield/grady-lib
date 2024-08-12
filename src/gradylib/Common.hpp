@@ -32,6 +32,11 @@ namespace gradylib {
     concept Mergeable = requires(T a, T b) {
         { mergePartials(a, b) } -> std::same_as<void>;
     };
+
+    template<typename KeyType, typename Key>
+    concept equality_comparable = requires (KeyType const & k1, Key const & k2) {
+        { k2 == k1 } -> std::same_as<bool>;
+    };
 }
 
 #endif //GRADY_LIB_COMMON_HPP

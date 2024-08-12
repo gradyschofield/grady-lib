@@ -35,3 +35,4 @@ add_executable(testParallelMapOperation ${SRC} src/test/TestParallelMapOperation
 add_executable(threadPoolTest ${SRC} src/test/ThreadPoolTest.cpp)
 add_executable(testParallelTraversals ${SRC} src/test/TestParallelTraversals.cpp)
 add_executable(testAltIntHash ${SRC} src/test/TestAltIntHash.cpp)
+add_executable(testStringViewKeys ${SRC} src/test/TestStringViewKeys.cpp)
