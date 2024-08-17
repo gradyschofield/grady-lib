@@ -27,6 +27,7 @@ set(SRC
 add_executable(testOpenHashSetTC ${SRC} src/test/TestOpenHashSetTC.cpp)
 add_executable(testOpenHashMapTC ${SRC} src/test/TestOpenHashMapTC.cpp)
 add_executable(testOpenHashMap ${SRC} src/test/TestOpenHashMap.cpp)
+add_executable(testOpenHashSet ${SRC} src/test/TestOpenHashSet.cpp)
 add_executable(testMMapViewableOpenHashMap ${SRC} src/test/TestMMapViewableOpenHashMap.cpp)
 add_executable(testAlignment ${SRC} src/test/AlignmentStuff.cpp)
 add_executable(perfectForwardStuff ${SRC} src/test/PerfectForwardStuff.cpp)
