@@ -427,7 +427,7 @@ namespace gradylib {
                 return idx != other.idx || container != other.container;
             }
 
-            const std::pair<Key const &, Value &> operator*() const {
+            std::pair<Key const &, Value &> operator*() const {
                 return {container->keys[idx], container->values[idx]};
             }
 
@@ -482,7 +482,7 @@ namespace gradylib {
                 return idx != other.idx || container != other.container;
             }
 
-            const std::pair<Key const &, Value const &> operator*() const {
+            std::pair<Key const &, Value const &> operator*() const {
                 return {container->keys[idx], container->values[idx]};
             }
 

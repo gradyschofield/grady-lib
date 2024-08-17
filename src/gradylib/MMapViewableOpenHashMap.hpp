@@ -82,6 +82,8 @@ namespace gradylib {
             mappingSize = std::filesystem::file_size(filename);
             memoryMapping = mmap(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
             if (memoryMapping == MAP_FAILED) {
+                close(fd);
+                memoryMapping = nullptr;
                 std::cout << "memory map failed: " << strerror(errno) << "\n";
                 exit(1);
             }

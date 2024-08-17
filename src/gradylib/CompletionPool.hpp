@@ -28,79 +28,80 @@ SOFTWARE.
 #include<atomic>
 #include<utility>
 
-template<typename T>
-class CompletionPool {
-    struct Node {
-        T t;
-        Node *next = nullptr;
+namespace gradylib {
+    template<typename T>
+    class CompletionPool {
+        struct Node {
+            T t;
+            Node *next = nullptr;
 
-        Node(T && t) : t(std::move(t)) {}
-        Node(T const &t) : t(t) {}
-    };
+            Node(T &&t) : t(std::move(t)) {}
 
-    std::atomic<Node*> head;
+            Node(T const &t) : t(t) {}
+        };
 
-public:
-    CompletionPool()
-        : head(nullptr)
-    {
-    }
+        std::atomic<Node *> head;
 
-    ~CompletionPool() {
-        Node * n = head;
-        while (n) {
-            Node * next = n->next;
-            delete n;
-            n = next;
-        }
-    }
-
-    template<typename U>
-    requires std::same_as<std::remove_cvref_t<U>, T>
-    void add(U && t) {
-        Node * n = new Node(std::forward<U>(t));
-        Node * expected = n->next = head.load(std::memory_order_relaxed);
-        while(!head.compare_exchange_strong(expected, n, std::memory_order_release, std::memory_order_relaxed)) {
-            n->next = expected;
-        }
-    }
-
-    class iterator {
-        Node * n;
     public:
-        explicit iterator(Node * n)
-            : n(n)
-        {
+        CompletionPool()
+                : head(nullptr) {
         }
 
-        bool operator==(iterator const &other) const {
-            return n == other.n;
+        ~CompletionPool() {
+            Node *n = head;
+            while (n) {
+                Node *next = n->next;
+                delete n;
+                n = next;
+            }
         }
 
-        bool operator!=(iterator const &other) const {
-            return n != other.n;
+        template<typename U>
+        requires std::same_as<std::remove_cvref_t<U>, T>
+        void add(U &&t) {
+            Node *n = new Node(std::forward<U>(t));
+            Node *expected = n->next = head.load(std::memory_order_relaxed);
+            while (!head.compare_exchange_strong(expected, n, std::memory_order_release, std::memory_order_relaxed)) {
+                n->next = expected;
+            }
         }
 
-        T & operator*() {
-            return n->t;
-        }
+        class iterator {
+            Node *n;
+        public:
+            explicit iterator(Node *n)
+                    : n(n) {
+            }
 
-        iterator & operator++() {
-            if (!n) {
+            bool operator==(iterator const &other) const {
+                return n == other.n;
+            }
+
+            bool operator!=(iterator const &other) const {
+                return n != other.n;
+            }
+
+            T &operator*() {
+                return n->t;
+            }
+
+            iterator &operator++() {
+                if (!n) {
+                    return *this;
+                }
+                n = n->next;
                 return *this;
             }
-            n = n->next;
-            return *this;
+        };
+
+        iterator begin() {
+            return iterator(head.load(std::memory_order_acquire));
+        }
+
+        iterator end() {
+            return iterator(nullptr);
         }
     };
-
-    iterator begin() {
-        return iterator(head.load(std::memory_order_acquire));
-    }
-
-    iterator end() {
-        return iterator(nullptr);
-    }
-};
+}
 
 #endif
