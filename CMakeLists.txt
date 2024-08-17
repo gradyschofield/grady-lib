@@ -7,7 +7,15 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_CXX_FLAGS_PROFILE "-O3 -p")
 
-include_directories(src/)
+include_directories(
+        src/
+        ../Catch2/src/
+        ../Catch2/release/generated-includes/
+)
+
+link_directories(
+        ../Catch2/release/src/
+)
 
 set(SRC
         src/gradylib/AltIntHash.hpp
@@ -35,6 +43,8 @@ add_executable(testCompletionPool ${SRC} src/test/TestCompletionPool.cpp)
 add_executable(testMMapI2HRSOpenHashMap ${SRC} src/test/TestMMapI2HRSOpenHashMap.cpp)
 add_executable(testParallelMapOperation ${SRC} src/test/TestParallelMapOperation.cpp)
 add_executable(threadPoolTest ${SRC} src/test/ThreadPoolTest.cpp)
-add_executable(testParallelTraversals ${SRC} src/test/TestParallelTraversals.cpp)
-add_executable(testAltIntHash ${SRC} src/test/TestAltIntHash.cpp)
 add_executable(testStringViewKeys ${SRC} src/test/TestStringViewKeys.cpp)
+add_executable(testAltIntHash ${SRC} src/test/TestAltIntHash.cpp)
+
+add_executable(testParallelTraversals ${SRC} src/test/TestParallelTraversals.cpp)
+target_link_libraries(testParallelTraversals PRIVATE Catch2 Catch2Main)
