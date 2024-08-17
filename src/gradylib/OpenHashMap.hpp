@@ -317,7 +317,6 @@ namespace gradylib {
                 idx = idx == keys.size() ? 0 : idx;
                 if (startIdx == idx) break;
             }
-            return;
         }
 
         void reserve(size_t size) {
