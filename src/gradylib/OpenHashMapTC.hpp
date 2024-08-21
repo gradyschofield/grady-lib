@@ -69,7 +69,7 @@ namespace gradylib {
                 newSize = std::max<size_t>(keySize + 1, std::max<size_t>(1, keySize) * growthFactor);
             }
             Key * newKeys = new Key[newSize];
-            Value * newValues = new Value[newSize];
+            Value * newValues = new Value[newSize]();
             BitPairSet newSetFlags(newSize);
             for (size_t i = 0; i < keySize; ++i) {
                 if (!setFlags.isFirstSet(i)) {

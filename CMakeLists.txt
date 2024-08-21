@@ -49,3 +49,6 @@ add_executable(testAltIntHash ${SRC} src/test/TestAltIntHash.cpp)
 
 add_executable(testParallelTraversals ${SRC} src/test/TestParallelTraversals.cpp)
 target_link_libraries(testParallelTraversals PRIVATE Catch2 Catch2Main)
+
+add_executable(testOpenHashMapTC2 ${SRC} src/test/TestOpenHashMapTC2.cpp)
+target_link_libraries(testOpenHashMapTC2 PRIVATE Catch2 Catch2Main)
