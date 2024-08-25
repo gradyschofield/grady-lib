@@ -43,7 +43,6 @@ add_executable(perfectForwardStuff ${SRC} src/test/PerfectForwardStuff.cpp)
 add_executable(testCompletionPool ${SRC} src/test/TestCompletionPool.cpp)
 add_executable(testMMapI2HRSOpenHashMap ${SRC} src/test/TestMMapI2HRSOpenHashMap.cpp)
 add_executable(testParallelMapOperation ${SRC} src/test/TestParallelMapOperation.cpp)
-add_executable(threadPoolTest ${SRC} src/test/ThreadPoolTest.cpp)
 add_executable(testStringViewKeys ${SRC} src/test/TestStringViewKeys.cpp)
 add_executable(testAltIntHash ${SRC} src/test/TestAltIntHash.cpp)
 
@@ -52,3 +51,6 @@ target_link_libraries(testParallelTraversals PRIVATE Catch2 Catch2Main)
 
 add_executable(testOpenHashMapTC2 ${SRC} src/test/TestOpenHashMapTC2.cpp)
 target_link_libraries(testOpenHashMapTC2 PRIVATE Catch2 Catch2Main)
+
+add_executable(threadPoolTest ${SRC} src/test/ThreadPoolTest.cpp)
+target_link_libraries(threadPoolTest PRIVATE Catch2 Catch2Main)

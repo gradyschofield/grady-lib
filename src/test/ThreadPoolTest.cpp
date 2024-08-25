@@ -2,18 +2,21 @@
 // Created by Grady Schofield on 7/27/24.
 //
 
+#include<unistd.h>
+
 #include<fstream>
 #include<sstream>
 #include<unordered_set>
+
+#include<catch2/catch_test_macros.hpp>
 
 #include"gradylib/ThreadPool.hpp"
 
 using namespace std;
 using namespace gradylib;
 
-int main() {
+TEST_CASE() {
     ThreadPool tp(thread::hardware_concurrency());
-    cout << "pool size: " << tp.size() << "\n";
     for (int i = 0; i < 100; ++i) {
         long numWork = 100;
         mutex outMutex;
@@ -39,8 +42,7 @@ int main() {
             sstr >> i;
             s.insert(i);
         }
-        if (s.size() != numWork) {
-            cout << "problem: " << s.size() << " " << numWork << "\n";
-        }
+        unlink("testfile.txt");
+        REQUIRE(s.size() == numWork);
     }
 }
