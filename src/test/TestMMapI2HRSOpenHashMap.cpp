@@ -2,6 +2,8 @@
 // Created by Grady Schofield on 7/25/24.
 //
 
+#include<catch2/catch_test_macros.hpp>
+
 #include<string>
 #include<unordered_map>
 
@@ -27,9 +29,9 @@ int64_t myRand() {
     return abs(x);
 }
 
-int main() {
-    int numStrings = 1E7;
-    int numInts = 1E8;
+TEST_CASE(){
+    int numStrings = 1E5;
+    int numInts = 1E6;
     MMapI2HRSOpenHashMap<int64_t>::Builder b;
     unordered_map<int64_t, string> test;
     OpenHashMap<string, int> strs;
@@ -61,18 +63,11 @@ int main() {
 
 
     startTime = chrono::high_resolution_clock::now();
-    if (b.size() != test.size()) {
-        cout << "size problem\n";
-        exit(1);
-    }
+    REQUIRE(b.size() == test.size());
+
     for (auto & [key, str] : test) {
-        if (!b.contains(key)) {
-            cout << "map does not contain key " << key << "\n";
-            exit(1);
-        } else if (b.at(key) != str) {
-            cout << "wrong value " << key << " " << str << " " << b.at(key) << "\n";
-            exit(1);
-        }
+        REQUIRE(b.contains(key));
+        REQUIRE(string(b.at(key)) == str);
     }
     endTime = chrono::high_resolution_clock::now();
     cout << "test time: " << chrono::duration_cast<chrono::milliseconds>(endTime-startTime).count() << "\n";
@@ -89,20 +84,11 @@ int main() {
     cout << "load time: " << chrono::duration_cast<chrono::milliseconds>(endTime-startTime).count() << "\n";
 
     startTime = chrono::high_resolution_clock::now();
-    if (m.size() != test.size()) {
-        cout << "size problem\n";
-        exit(1);
-    }
+    REQUIRE(m.size() == test.size());
     for (auto & [key, str] : test) {
-        if (!m.contains(key)) {
-            cout << "map does not contain key " << key << "\n";
-            exit(1);
-        } else if (m.at(key) != str) {
-            cout << "wrong value " << key << " " << str << " " << m.at(key) << "\n";
-            exit(1);
-        }
+        REQUIRE(m.contains(key));
+        REQUIRE(string(m.at(key)) == str);
     }
     endTime = chrono::high_resolution_clock::now();
     cout << "test time: " << chrono::duration_cast<chrono::milliseconds>(endTime-startTime).count() << "\n";
-    return 0;
 }

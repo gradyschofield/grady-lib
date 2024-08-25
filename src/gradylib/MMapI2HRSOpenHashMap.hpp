@@ -167,7 +167,7 @@ namespace gradylib {
                         ofs.write(&t, 1);
                     }
                 }
-                for (auto & [idx1, idx2] : intMap) {
+                for (auto && [idx1, idx2] : intMap) {
                     idx2 = stringOffsetMap.at(idx2);
                 }
                 int padSize = alignment - ofs.tellp() % alignment;

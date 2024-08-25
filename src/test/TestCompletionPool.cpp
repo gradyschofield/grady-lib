@@ -2,6 +2,8 @@
 // Created by Grady Schofield on 8/9/24.
 //
 
+#include<catch2/catch_test_macros.hpp>
+
 #include<iostream>
 
 #include<gradylib/AltIntHash.hpp>
@@ -12,7 +14,7 @@
 using namespace gradylib;
 using namespace std;
 
-int main(int argc, char ** argv) {
+TEST_CASE(){
     ThreadPool tp;
     CompletionPool<int> completionPool;
     for (int i = 0; i < tp.size(); ++i) {
@@ -34,8 +36,5 @@ int main(int argc, char ** argv) {
         }
         total += count;
     }
-    if (tp.size() * 10000 != total) {
-        cout << "Total count wrong: " << total << "\n";
-    }
-    return 0;
+    REQUIRE(tp.size() * 10000 == total);
 }
