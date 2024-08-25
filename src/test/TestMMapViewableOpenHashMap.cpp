@@ -1,6 +1,7 @@
 //
 // Created by Grady Schofield on 8/3/24.
 //
+#include<catch2/catch_test_macros.hpp>
 
 #include<fstream>
 #include<span>
@@ -50,7 +51,7 @@ namespace std {
     }
 }
 
-int main( ) {
+TEST_CASE() {
     MMapViewableOpenHashMap<int, vector<int>>::Builder z;
 
     z.put(4, vector<int>{1, 2, 3});
@@ -59,20 +60,11 @@ int main( ) {
 
     MMapViewableOpenHashMap<int, vector<int>> dz("viewable.bin");
 
-    if (!dz.contains(4)) {
-        cout << "Missing key\n";
-        exit(1);
-    }
+    REQUIRE(dz.contains(4));
     auto view = dz.at(4);
-    if (view.size() != 3) {
-        cout << "Wrong size " << view.size() << "\n";
-        exit(1);
-    }
+    REQUIRE(view.size() == 3);
     for (int i = 0; i < 3; ++i) {
-        if (view[i] != i+1) {
-            cout << "Wrong value\n";
-            exit(1);
-        }
+        REQUIRE(view[i] == i+1);
     }
 
     MMapViewableOpenHashMap<int, Ser>::Builder z2;
@@ -82,24 +74,10 @@ int main( ) {
 
     MMapViewableOpenHashMap<int, Ser> dz2("viewable2.bin");
 
-    if (!dz2.contains(5)) {
-        cout << "Missing key\n";
-        exit(1);
-    }
+    REQUIRE(dz2.contains(5));
     auto view2 = dz2.at(5);
-    if (view2.x.size() != 3) {
-        cout << "Wrong size " << view2.x.size() << "\n";
-        exit(1);
-    }
+    REQUIRE(view2.x.size() == 3);
     for (int i = 0; i < 3; ++i) {
-        if (view2.x[i] != i+1) {
-            cout << "Wrong value\n";
-            exit(1);
-        }
+        REQUIRE(view2.x[i] == i+1);
     }
-
-    for (auto const & [key, value] : dz2) {
-        cout << key << "\n";
-    }
-    return 0;
 }

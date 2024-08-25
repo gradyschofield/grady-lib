@@ -41,8 +41,6 @@ add_executable(testOpenHashSetTC ${SRC} src/test/TestOpenHashSetTC.cpp)
 add_executable(testOpenHashMapTC ${SRC} src/test/TestOpenHashMapTC.cpp)
 add_executable(testOpenHashMap ${SRC} src/test/TestOpenHashMap.cpp)
 add_executable(testOpenHashSet ${SRC} src/test/TestOpenHashSet.cpp)
-add_executable(testMMapViewableOpenHashMap ${SRC} src/test/TestMMapViewableOpenHashMap.cpp)
-add_executable(testParallelMapOperation ${SRC} src/test/TestParallelMapOperation.cpp)
 add_executable(testStringViewKeys ${SRC} src/test/TestStringViewKeys.cpp)
 
 add_executable(testParallelTraversals ${SRC} src/test/TestParallelTraversals.cpp)
@@ -59,3 +57,6 @@ target_link_libraries(testCompletionPool PRIVATE Catch2 Catch2Main)
 
 add_executable(testMMapI2HRSOpenHashMap ${SRC} src/test/TestMMapI2HRSOpenHashMap.cpp)
 target_link_libraries(testMMapI2HRSOpenHashMap PRIVATE Catch2 Catch2Main)
+
+add_executable(testMMapViewableOpenHashMap ${SRC} src/test/TestMMapViewableOpenHashMap.cpp)
+target_link_libraries(testMMapViewableOpenHashMap PRIVATE Catch2 Catch2Main)

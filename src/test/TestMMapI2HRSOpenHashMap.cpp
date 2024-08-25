@@ -29,7 +29,7 @@ int64_t myRand() {
     return abs(x);
 }
 
-TEST_CASE(){
+TEST_CASE() {
     int numStrings = 1E5;
     int numInts = 1E6;
     MMapI2HRSOpenHashMap<int64_t>::Builder b;
