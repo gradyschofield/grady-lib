@@ -109,8 +109,8 @@ namespace gradylib {
         }
     };
 
-    std::unique_ptr<ThreadPool> GRADY_LIB_DEFAULT_THREADPOOL;
-    std::mutex GRADY_LIB_DEFAULT_THREADPOOL_MUTEX;
+    inline std::unique_ptr<ThreadPool> GRADY_LIB_DEFAULT_THREADPOOL;
+    inline std::mutex GRADY_LIB_DEFAULT_THREADPOOL_MUTEX;
 }
 
 #endif //GRADY_LIB_THREADPOOL_HPP

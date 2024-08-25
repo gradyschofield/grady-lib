@@ -15,7 +15,7 @@
 using namespace std;
 using namespace gradylib;
 
-TEST_CASE() {
+TEST_CASE("Thread pool") {
     ThreadPool tp(thread::hardware_concurrency());
     for (int i = 0; i < 100; ++i) {
         long numWork = 100;

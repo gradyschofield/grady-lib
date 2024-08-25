@@ -12,7 +12,7 @@
 using namespace gradylib;
 using namespace std;
 
-TEST_CASE() {
+TEST_CASE("Open hash map of trivially copyable types 2") {
 
     long size = 500E3;
 

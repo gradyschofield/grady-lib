@@ -10,7 +10,7 @@
 using namespace gradylib;
 using namespace std;
 
-TEST_CASE() {
+TEST_CASE("Parallel traversals") {
     OpenHashMap<int64_t, int64_t, AltIntHash> m;
     size_t num = 100000;
     for (size_t i = 0; i < num; ++i) {

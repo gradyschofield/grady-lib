@@ -37,26 +37,20 @@ add_executable(testAlignment ${SRC} src/experiment/AlignmentStuff.cpp)
 add_executable(perfectForwardStuff ${SRC} src/experiment/PerfectForwardStuff.cpp)
 add_executable(testAltIntHash ${SRC} src/experiment/TestAltIntHash.cpp)
 
-add_executable(testOpenHashSetTC ${SRC} src/test/TestOpenHashSetTC.cpp)
-add_executable(testOpenHashMapTC ${SRC} src/test/TestOpenHashMapTC.cpp)
-add_executable(testOpenHashMap ${SRC} src/test/TestOpenHashMap.cpp)
-add_executable(testOpenHashSet ${SRC} src/test/TestOpenHashSet.cpp)
-add_executable(testStringViewKeys ${SRC} src/test/TestStringViewKeys.cpp)
+add_executable(testStringViewKeys ${SRC} src/experiment/TestStringViewKeys.cpp)
 
-add_executable(testParallelTraversals ${SRC} src/test/TestParallelTraversals.cpp)
-target_link_libraries(testParallelTraversals PRIVATE Catch2 Catch2Main)
+set(TEST_SRC
+        src/test/TestOpenHashMap.cpp
+        src/test/TestMMapViewableOpenHashMap.cpp
+        src/test/TestMMapI2HRSOpenHashMap.cpp
+        src/test/TestCompletionPool.cpp
+        src/test/ThreadPoolTest.cpp
+        src/test/TestParallelTraversals.cpp
+        src/test/TestOpenHashMapTC.cpp
+        src/test/TestOpenHashMapTC2.cpp
+        src/test/TestOpenHashSet.cpp
+        src/test/TestOpenHashSetTC.cpp
+)
 
-add_executable(testOpenHashMapTC2 ${SRC} src/test/TestOpenHashMapTC2.cpp)
-target_link_libraries(testOpenHashMapTC2 PRIVATE Catch2 Catch2Main)
-
-add_executable(threadPoolTest ${SRC} src/test/ThreadPoolTest.cpp)
-target_link_libraries(threadPoolTest PRIVATE Catch2 Catch2Main)
-
-add_executable(testCompletionPool ${SRC} src/test/TestCompletionPool.cpp)
-target_link_libraries(testCompletionPool PRIVATE Catch2 Catch2Main)
-
-add_executable(testMMapI2HRSOpenHashMap ${SRC} src/test/TestMMapI2HRSOpenHashMap.cpp)
-target_link_libraries(testMMapI2HRSOpenHashMap PRIVATE Catch2 Catch2Main)
-
-add_executable(testMMapViewableOpenHashMap ${SRC} src/test/TestMMapViewableOpenHashMap.cpp)
-target_link_libraries(testMMapViewableOpenHashMap PRIVATE Catch2 Catch2Main)
+add_executable(allTests ${SRC} ${TEST_SRC})
+target_link_libraries(allTests PRIVATE Catch2 Catch2Main)

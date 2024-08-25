@@ -14,7 +14,7 @@
 using namespace gradylib;
 using namespace std;
 
-TEST_CASE(){
+TEST_CASE("Completion Pool"){
     ThreadPool tp;
     CompletionPool<int> completionPool;
     for (int i = 0; i < tp.size(); ++i) {

@@ -51,7 +51,7 @@ namespace std {
     }
 }
 
-TEST_CASE() {
+TEST_CASE("Memory mapped viewable object open hash map") {
     MMapViewableOpenHashMap<int, vector<int>>::Builder z;
 
     z.put(4, vector<int>{1, 2, 3});

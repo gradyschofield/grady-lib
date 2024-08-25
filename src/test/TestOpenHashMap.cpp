@@ -2,6 +2,8 @@
 // Created by Grady Schofield on 7/22/24.
 //
 
+#include<catch2/catch_test_macros.hpp>
+
 #include<chrono>
 #include<string>
 #include<unordered_map>
@@ -14,17 +16,17 @@
 
 using namespace std;
 
-string randString() {
-    int len = rand() % 12 + 3;
-    vector<char> buffer(len);
-    for (int i = 0; i < len; ++i) {
-        buffer[i] = rand() % (1 + 126-32) + 32;
-    }
-    return string(buffer.data(), len);
-}
 
-int main(int argc, char ** argv) {
-    long mapSize = 1E8;
+TEST_CASE("Open hash map") {
+    auto randString = []() {
+        int len = rand() % 12 + 3;
+        vector<char> buffer(len);
+        for (int i = 0; i < len; ++i) {
+            buffer[i] = rand() % (1 + 126-32) + 32;
+        }
+        return string(buffer.data(), len);
+    };
+    long mapSize = 1E6;
     gradylib::OpenHashMap<string, long> map;
     map.reserve(mapSize);
     vector<string> strs;
@@ -56,15 +58,10 @@ int main(int argc, char ** argv) {
 
     startTime = chrono::high_resolution_clock::now();
     for (auto & p : test) {
-        if (!map.contains(p.first)) {
-            cout << "Missing key\n";
-        } else if (map[p.first] != p.second) {
-            cout << "Wrong value\n";
-        }
+        REQUIRE(map.contains(p.first));
+        REQUIRE(map[p.first] == p.second);
     }
-    if (test.size() != map.size()) {
-        cout << "size problem";
-    }
+    REQUIRE(test.size() == map.size());
     endTime = chrono::high_resolution_clock::now();
     cout << "OpenHashMap check " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << " ms\n";
 
@@ -74,15 +71,10 @@ int main(int argc, char ** argv) {
 
     startTime = chrono::high_resolution_clock::now();
     for (auto & p : test) {
-        if (!map2.contains(p.first)) {
-            cout << "Missing key\n";
-        } else if (map2[p.first] != p.second) {
-            cout << "Wrong value\n";
-        }
+        REQUIRE(map2.contains(p.first));
+        REQUIRE(map2[p.first] == p.second);
     }
-    if (test.size() != map2.size()) {
-        cout << "size problem";
-    }
+    REQUIRE(test.size() == map2.size());
     endTime = chrono::high_resolution_clock::now();
     cout << "MMapS2IOpenHashMap check " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << " ms\n";
 
@@ -94,26 +86,18 @@ int main(int argc, char ** argv) {
         sidx[idx] = string(str);
     }
 
-    if (sidx.size() != map2.size()) {
-        cout << "Size problem for sidx " << sidx.size() << " " << map2.size() << "\n";
-        exit(1);
-    }
+    REQUIRE(sidx.size() == map2.size());
 
-    for (auto [idx, str] : sidx) {
-        if (!map2.contains(str)) {
-            cout << "sidx doesn't contain " << idx << "\n";
-            exit(1);
-        } else if (map2[str] != idx) {
-            cout << "sidx doesn't contain write value for " << idx << " " << str << " " << sidx[idx] << "\n";
-            exit(1);
-        }
+    for (auto && [idx, str] : sidx) {
+        REQUIRE(map2.contains(str));
+        REQUIRE(map2[str] == idx);
     }
 
 
     gradylib::OpenHashMap<long, string> i2s;
     i2s.reserve(map.size());
     unordered_map<long, string> testI2s;
-    for (auto const & [str, idx] : map) {
+    for (auto && [str, idx] : map) {
         i2s.put(idx, str);
         testI2s[idx] = str;
     }
@@ -122,19 +106,11 @@ int main(int argc, char ** argv) {
 
     gradylib::MMapI2SOpenHashMap<long> i2sLoaded("i2s.bin");
 
-    if (testI2s.size() != i2sLoaded.size()) {
-        cout << "size problem for i2s\n";
+    REQUIRE(testI2s.size() == i2sLoaded.size());
+
+    for (auto && [idx, str] : testI2s) {
+        REQUIRE(i2s.contains(idx));
+        REQUIRE(i2s[idx] == str);
     }
 
-    for (auto const & [idx, str] : testI2s) {
-        if (!i2s.contains(idx)) {
-            cout << "key problem in i2s\n";
-            exit(1);
-        } else if (i2s[idx] != str) {
-            cout << "value problem in i2s\n";
-            exit(1);
-        }
-    }
-
-    return 0;
 }

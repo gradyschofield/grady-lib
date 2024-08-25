@@ -14,22 +14,22 @@
 using namespace std;
 using namespace gradylib;
 
-string randString() {
-    int len = rand() % 12 + 3;
-    vector<char> buffer(len);
-    for (int i = 0; i < len; ++i) {
-        buffer[i] = rand() % (1 + 126-32) + 32;
-    }
-    return string(buffer.data(), len);
-}
-
 int64_t myRand() {
     static int64_t x = 578363509162734;
     x = x * 175055391405843 + 588734109354867;
     return abs(x);
 }
 
-TEST_CASE() {
+TEST_CASE("Integer to highly redundant string open hash map") {
+    auto randString = []() {
+        int len = rand() % 12 + 3;
+        vector<char> buffer(len);
+        for (int i = 0; i < len; ++i) {
+            buffer[i] = rand() % (1 + 126-32) + 32;
+        }
+        return string(buffer.data(), len);
+    };
+
     int numStrings = 1E5;
     int numInts = 1E6;
     MMapI2HRSOpenHashMap<int64_t>::Builder b;

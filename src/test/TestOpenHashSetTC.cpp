@@ -1,3 +1,5 @@
+#include<catch2/catch_test_macros.hpp>
+
 #include<bit>
 #include<chrono>
 #include<iostream>
@@ -8,15 +10,15 @@
 using namespace std;
 using namespace gradylib;
 
-int myRand() {
-    return rand() % 100000000;
-}
+TEST_CASE("Open hash set on trivially copyable types"){
+    auto myRand = []() {
+        return rand() % 100000000;
+    };
 
-int main() {
     using HashSet = OpenHashSetTC<int>;
     HashSet myset;
 
-    long size  = 1E8;
+    long size  = 1E6;
     auto startTime = chrono::high_resolution_clock::now();
     size_t accum = 0;
     for (long i = 0; i < size; ++i) {
@@ -48,6 +50,7 @@ int main() {
         test.insert(i);
     }
 
+    REQUIRE(myset.size() == test.size());
     cout << myset.size() << " " << test.size() << "\n";
 
     startTime = chrono::high_resolution_clock::now();
@@ -72,7 +75,7 @@ int main() {
     endTime = chrono::high_resolution_clock::now();
     cout << chrono::duration_cast<chrono::microseconds>(endTime - startTime).count() << "\n";
 
-    size_t numMods = 1E8;
+    size_t numMods = 1E6;
     for (size_t i = 0; i < numMods; ++i) {
         int x = myRand();
         myset.insert(x);
@@ -81,18 +84,14 @@ int main() {
         myset.erase(y);
         test.erase(y);
     }
-    cout << myset.size() << " " << test.size() << "\n";
+    REQUIRE(myset.size() == test.size());
 
     startTime = chrono::high_resolution_clock::now();
     for (int i : test) {
-        if (!myset.contains(i)) {
-            cout << "problem\n";
-        }
+        REQUIRE(myset.contains(i));
     }
 
-    if (test.size() != myset.size()) {
-        cout << "size problem\n";
-    }
+    REQUIRE(test.size() == myset.size());
     endTime = chrono::high_resolution_clock::now();
     cout << "testing from memory time: " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << "\n";
 
@@ -106,18 +105,11 @@ int main() {
 
     startTime = chrono::high_resolution_clock::now();
     for (int i : test) {
-        if (!myset3.contains(i)) {
-            cout << "problem\n";
-        }
+        REQUIRE(myset3.contains(i));
     }
 
-    if (test.size() != myset3.size()) {
-        cout << "size problem\n";
-    }
+    REQUIRE(test.size() == myset3.size());
     endTime = chrono::high_resolution_clock::now();
     cout << "testing from mmap load: " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << "\n";
 
-    cout << (endian::native == endian::big ? "big" : "little") << "\n";
-
-    return 0;
 }

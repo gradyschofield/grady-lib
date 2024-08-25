@@ -2,6 +2,8 @@
 // Created by Grady Schofield on 7/21/24.
 //
 
+#include<catch2/catch_test_macros.hpp>
+
 #include<iostream>
 #include<unordered_map>
 
@@ -10,11 +12,11 @@
 using namespace std;
 using namespace gradylib;
 
-int main(int argc, char ** argv) {
+TEST_CASE("Open hash map on trivially copyable types"){
 
     OpenHashMapTC<int64_t, int32_t> m;
     unordered_map<int64_t, int32_t> test;
-    long size = 1E8;
+    long size = 1E6;
     for (long i = 0; i < size; ++i) {
         int x = rand();
         int y = rand();
@@ -23,19 +25,11 @@ int main(int argc, char ** argv) {
     }
 
     auto startTime = chrono::high_resolution_clock::now();
-    if (m.size() != test.size()) {
-        cout << "size problem\n";
-        exit(1);
-    }
+    REQUIRE(m.size() == test.size());
 
     for (auto & p : test) {
-        if (!m.contains(p.first)) {
-            cout << "key missing\n";
-            exit(1);
-        } else if (p.second != m[p.first]) {
-            cout << "wrong value\n";
-            exit(1);
-        }
+        REQUIRE(m.contains(p.first));
+        REQUIRE(p.second == m[p.first]);
     }
     auto endTime = chrono::high_resolution_clock::now();
     cout << "testing took " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << " ms\n";
@@ -44,23 +38,14 @@ int main(int argc, char ** argv) {
 
     OpenHashMapTC<int64_t, int32_t> m2("openhashmaptc.bin");
 
-    if (m2.size() != test.size()) {
-        cout << "size problem\n";
-        exit(1);
-    }
+    REQUIRE(m2.size() == test.size());
 
     startTime = chrono::high_resolution_clock::now();
     for (auto & p : test) {
-        if (!m2.contains(p.first)) {
-            cout << "key missing\n";
-            exit(1);
-        } else if (p.second != m2.at(p.first)) {
-            cout << "wrong value\n";
-            exit(1);
-        }
+        REQUIRE(m2.contains(p.first));
+        REQUIRE(p.second == m2.at(p.first));
     }
     endTime = chrono::high_resolution_clock::now();
     cout << "testing took " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << " ms\n";
 
-    return 0;
 }
