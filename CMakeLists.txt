@@ -4,7 +4,7 @@ project(grady_lib)
 set(CMAKE_CXX_STANDARD 26)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-set(CMAKE_CXX_FLAGS_DEBUG "-Og -g")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_CXX_FLAGS_PROFILE "-O3 -pg -g")
 set(CMAKE_CXX_FLAGS_COVERAGE "-Og -g -fprofile-arcs -ftest-coverage")
 
@@ -40,10 +40,11 @@ add_executable(testAltIntHash ${SRC} src/experiment/TestAltIntHash.cpp)
 add_executable(testStringViewKeys ${SRC} src/experiment/TestStringViewKeys.cpp)
 
 set(TEST_SRC
+        src/test/TestBitPairSet.cpp
+        src/test/TestCompletionPool.cpp
         src/test/TestOpenHashMap.cpp
         src/test/TestMMapViewableOpenHashMap.cpp
         src/test/TestMMapI2HRSOpenHashMap.cpp
-        src/test/TestCompletionPool.cpp
         src/test/ThreadPoolTest.cpp
         src/test/TestParallelTraversals.cpp
         src/test/TestOpenHashMapTC.cpp

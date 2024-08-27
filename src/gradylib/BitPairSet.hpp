@@ -38,6 +38,8 @@ SOFTWARE.
 #include<iostream>
 #include<utility>
 
+#include<gradylib/Exception.hpp>
+
 namespace gradylib {
     class BitPairSet {
         using UnderlyingInt = uint32_t;
@@ -54,8 +56,7 @@ namespace gradylib {
 
         inline void unset(size_t idx, UnderlyingInt pairMask) {
             if (readOnly) {
-                std::cout << "Tried to modify read only BitPairSet\n";
-                exit(1);
+                throw gradylibMakeException("Tried to modify read only BitPairSet");
             }
             size_t base = idx >> bitShiftForDivision;
             size_t offsetShift = (idx & mask) << 1;
@@ -64,8 +65,7 @@ namespace gradylib {
 
         inline void set(size_t idx, UnderlyingInt pairMask) {
             if (readOnly) {
-                std::cout << "Tried to modify read only BitPairSet\n";
-                exit(1);
+                throw gradylibMakeException("Tried to modify read only BitPairSet");
             }
             size_t base = idx >> bitShiftForDivision;
             size_t offsetShift = (idx & mask) << 1;
@@ -158,13 +158,12 @@ namespace gradylib {
 
         void resize(size_t size) {
             if (readOnly) {
-                std::cout << "Tried to resize a read only BitPairSet\n";
-                exit(1);
+                throw gradylibMakeException("Tried to resize a read only BitPairSet");
             }
             size_t newSize = getUnderlyingLength(size);
             UnderlyingInt *newUnderlying = new UnderlyingInt[newSize];
             size_t currentSize = getUnderlyingLength(setSize);
-            memcpy(newUnderlying, underlying, std::min(newSize, currentSize));
+            memcpy(newUnderlying, underlying, std::min(newSize, currentSize) * sizeof(UnderlyingInt));
             if (newSize > currentSize) {
                 memset(&newUnderlying[currentSize], 0, (newSize - currentSize) * sizeof(UnderlyingInt));
             }
