@@ -262,8 +262,9 @@ namespace gradylib {
                  equality_comparable<KeyType, Key>
         Value const & at(KeyType const &key) const {
             if (keys.size() == 0) {
-                std::cout << "OpenHashMap doesn't contain key\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "OpenHashMap doesn't contain key";
+                throw gradylibMakeException(sstr.str());
             }
             size_t hash;
             if constexpr (std::same_as<Key, std::string> && std::same_as<std::remove_cvref_t<KeyType>, std::string_view>) {
@@ -278,15 +279,17 @@ namespace gradylib {
                     return values[idx];
                 }
                 if (wasSet && keys[idx] == key) {
-                    std::cout << "OpenHashMap doesn't contain key\n";
-                    exit(1);
+                    std::ostringstream sstr;
+                    sstr << "OpenHashMap doesn't contain key";
+                    throw gradylibMakeException(sstr.str());
                 }
                 ++idx;
                 idx = idx == keys.size() ? 0 : idx;
                 if (startIdx == idx) break;
             }
-            std::cout << "OpenHashMap doesn't contain key\n";
-            exit(1);
+            std::ostringstream sstr;
+            sstr << "OpenHashMap doesn't contain key";
+            throw gradylibMakeException(sstr.str());
         }
 
         template<typename KeyType>
@@ -529,8 +532,9 @@ namespace gradylib {
     void writeMappable(std::string filename, OpenHashMap<std::string, IndexType> const & m) {
         std::ofstream ofs(filename);
         if (ofs.fail()) {
-            std::cout << "Couldn't open file " << filename << " in writeMappable.\n";
-            exit(1);
+            std::ostringstream sstr;
+            sstr << "Couldn't open file " << filename << " in writeMappable.";
+            throw gradylibMakeException(sstr.str());
         }
         size_t mapSize = m.mapSize;
         ofs.write(static_cast<char*>(static_cast<void*>(&mapSize)), 8);
@@ -573,8 +577,9 @@ namespace gradylib {
     void writeMappable(std::string filename, OpenHashMap<IndexType, std::string> const & m) {
         std::ofstream ofs(filename);
         if (ofs.fail()) {
-            std::cout << "Couldn't open file " << filename << " in writeMappable.\n";
-            exit(1);
+            std::ostringstream sstr;
+            sstr << "Couldn't open file " << filename << " in writeMappable.";
+            throw gradylibMakeException(sstr.str());
         }
         size_t mapSize = m.mapSize;
         ofs.write(static_cast<char*>(static_cast<void*>(&mapSize)), 8);

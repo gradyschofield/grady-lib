@@ -31,6 +31,7 @@ SOFTWARE.
 #include<unistd.h>
 
 #include<fstream>
+#include<sstream>
 #include<string>
 #include<string_view>
 #include<type_traits>
@@ -56,16 +57,18 @@ namespace gradylib {
         explicit MMapI2HRSOpenHashMap(std::string filename) {
             fd = open(filename.c_str(), O_RDONLY);
             if (fd < 0) {
-                std::cout << "Error opening file " << filename << "\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "Error opening file " << filename;
+                throw gradylibMakeException(sstr.str());
             }
             mappingSize = std::filesystem::file_size(filename);
-            memoryMapping = mmap(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
+            memoryMapping = mmap(nullptr, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
             if (memoryMapping == MAP_FAILED) {
                 close(fd);
                 memoryMapping = nullptr;
-                std::cout << "memory map failed: " << strerror(errno) << "\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "memory map failed: " << strerror(errno);
+                throw gradylibMakeException(sstr.str());
             }
             std::byte *ptr = static_cast<std::byte *>(memoryMapping);
             std::byte *base = ptr;
@@ -88,8 +91,9 @@ namespace gradylib {
 
         std::string_view at(IndexType idx) const {
             if (!contains(idx)) {
-                std::cout << "Map doesn't contain " << idx << "\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "Map doesn't contain " << idx;
+                throw gradylibMakeException(sstr.str());
             }
             std::byte const * base = static_cast<std::byte const *>(static_cast<void const *>(stringMapping));
             std::byte const * ptr = base + intMap.at(idx);
@@ -129,8 +133,9 @@ namespace gradylib {
 
             std::string_view at(IndexType idx) const {
                 if (!contains(idx)) {
-                    std::cout << "Map doesn't contain " << idx << "\n";
-                    exit(1);
+                    std::ostringstream sstr;
+                    sstr << "Map doesn't contain " << idx;
+                    throw gradylibMakeException(sstr.str());
                 }
                 return strings.at(intMap.at(idx));
             }
@@ -148,8 +153,9 @@ namespace gradylib {
             void write(std::string filename, int alignment = alignof(void*)) {
                 std::ofstream ofs(filename, std::ios::binary);
                 if (ofs.fail()) {
-                    std::cout << "Problem opening file " << filename << "\n";
-                    exit(1);
+                    std::ostringstream sstr;
+                    sstr << "Problem opening file " << filename;
+                    throw gradylibMakeException(sstr.str());
                 }
                 size_t intMapOffset = 0;
                 ofs.write(static_cast<char*>(static_cast<void*>(&intMapOffset)), 8);
@@ -204,7 +210,7 @@ namespace gradylib {
                 return iter != other.iter || container != other.container;
             }
 
-            const std::pair<IndexType, std::string_view> operator*() {
+            std::pair<IndexType, std::string_view> operator*() {
                 return {iter.key(), container->at(iter.key())};
             }
 

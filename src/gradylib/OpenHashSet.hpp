@@ -424,8 +424,9 @@ namespace gradylib {
     void writeMappable(std::string filename, OpenHashSet<std::string> const & m) {
         std::ofstream ofs(filename);
         if (ofs.fail()) {
-            std::cout << "Couldn't open file " << filename << " in writeMappable.\n";
-            exit(1);
+            std::ostringstream sstr;
+            sstr << "Couldn't open file " << filename << " in writeMappable.";
+            throw gradylibMakeException(sstr.str());
         }
         size_t setSize = m.setSize;
         ofs.write(static_cast<char*>(static_cast<void*>(&setSize)), 8);
@@ -460,8 +461,9 @@ namespace gradylib {
     void writeMappable(std::string filename, OpenHashSet<IndexType> const & m) {
         std::ofstream ofs(filename);
         if (ofs.fail()) {
-            std::cout << "Couldn't open file " << filename << " in writeMappable.\n";
-            exit(1);
+            std::ostringstream sstr;
+            sstr << "Couldn't open file " << filename << " in writeMappable.";
+            throw gradylibMakeException(sstr.str());
         }
         size_t setSize = m.setSize;
         ofs.write(static_cast<char*>(static_cast<void*>(&setSize)), 8);

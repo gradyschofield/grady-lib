@@ -210,14 +210,16 @@ namespace gradylib {
         explicit OpenHashMapTC(std::string filename) {
             fd = open(filename.c_str(), O_RDONLY);
             if (fd < 0) {
-                std::cout << "Error opening file " << filename << "\n";
-                exit(1);
+                std::ostringstream ostr;
+                ostr << "Error opening file " << filename;
+                throw gradylibMakeException(ostr.str());
             }
             mappingSize = std::filesystem::file_size(filename);
             memoryMapping = mmap(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
             if (memoryMapping == MAP_FAILED) {
-                std::cout << "memory map failed: " << strerror(errno) << "\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "memory map failed: " << strerror(errno);
+                throw gradylibMakeException(sstr.str());
             }
             setFromMemoryMapping(memoryMapping);
         }
@@ -233,8 +235,9 @@ namespace gradylib {
 
         Value &operator[](Key const &key) {
             if (readOnly) {
-                std::cout << "Cannot modify mmap\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "Cannot modify mmap";
+                throw gradylibMakeException(sstr.str());
             }
             size_t hash;
             size_t idx;
@@ -282,8 +285,9 @@ namespace gradylib {
 
         void put(Key const &key, Value const &value) {
             if (readOnly) {
-                std::cout << "Cannot modify mmap\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "Cannot modify mmap";
+                throw gradylibMakeException(sstr.str());
             }
             size_t hash = 0;
             size_t idx = 0;
@@ -337,8 +341,9 @@ namespace gradylib {
 
         Value const & at(Key const &key) const {
             if (keySize == 0) {
-                std::cout << "key not found in map\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "key not found in map";
+                throw gradylibMakeException(sstr.str());
             }
             size_t hash = hashFunction(key);
             size_t idx = hash % keySize;
@@ -348,15 +353,17 @@ namespace gradylib {
                     return values[idx];
                 }
                 if (wasSet && keys[idx] == key) {
-                    std::cout << "key not found in map\n";
-                    exit(1);
+                    std::ostringstream sstr;
+                    sstr << "key not found in map";
+                    throw gradylibMakeException(sstr.str());
                 }
                 ++idx;
                 idx = idx == keySize ? 0 : idx;
                 if (startIdx == idx) break;
             }
-            std::cout << "key not found in map\n";
-            exit(1);
+            std::ostringstream sstr;
+            sstr << "key not found in map";
+            throw gradylibMakeException(sstr.str());
         }
 
         bool contains(Key const &key) const {
@@ -382,8 +389,9 @@ namespace gradylib {
 
         void erase(Key const &key) {
             if (readOnly) {
-                std::cout << "Cannot modify mmap\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "Cannot modify mmap";
+                throw gradylibMakeException(sstr.str());
             }
             size_t hash = hashFunction(key);
             size_t idx = hash % keySize;
@@ -405,8 +413,9 @@ namespace gradylib {
 
         void reserve(size_t size) {
             if (readOnly) {
-                std::cout << "Cannot modify mmap\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "Cannot modify mmap";
+                throw gradylibMakeException(sstr.str());
             }
             rehash(size);
         }
@@ -527,8 +536,9 @@ namespace gradylib {
 
         void clear() {
             if (readOnly) {
-                std::cout << "Can't clear a readonly set\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "Can't clear a readonly set";
+                throw gradylibMakeException(sstr.str());
             }
             setFlags.clear();
             mapSize = 0;
@@ -537,8 +547,9 @@ namespace gradylib {
         void write(std::string filename, int alignment = alignof(void*)) const {
             std::ofstream ofs(filename, std::ios::binary);
             if (ofs.fail()) {
-                std::cout << "Couldn't open " << filename << " for writing in OpenHashMapTC::write\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "Couldn't open " << filename << " for writing in OpenHashMapTC::write";
+                throw gradylibMakeException(sstr.str());
             }
             write(ofs, alignment);
         }

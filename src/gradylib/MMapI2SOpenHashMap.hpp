@@ -115,16 +115,18 @@ namespace gradylib {
         explicit MMapI2SOpenHashMap(std::string filename) {
             fd = open(filename.c_str(), O_RDONLY);
             if (fd < 0) {
-                std::cout << "Couldn't open " << filename << " in MMapI2SOpenHashMap\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "Couldn't open " << filename << " in MMapI2SOpenHashMap";
+                throw gradylibMakeException(sstr.str());
             }
             mappingSize = std::filesystem::file_size(filename);
             memoryMapping = mmap(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
             if (memoryMapping == MAP_FAILED) {
                 close(fd);
                 memoryMapping = nullptr;
-                std::cout << "mmap failed " << strerror(errno) << "\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "mmap failed " << strerror(errno);
+                throw gradylibMakeException(sstr.str());
             }
             std::byte *ptr = static_cast<std::byte *>(memoryMapping);
             std::byte *base = ptr;
@@ -151,8 +153,9 @@ namespace gradylib {
 
         std::string_view operator[](IndexType key) const {
             if (keySize == 0) {
-                std::cout << key << " not found in map\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << key << " not found in map";
+                throw gradylibMakeException(sstr.str());
             }
             size_t hash;
             size_t idx;
@@ -174,18 +177,21 @@ namespace gradylib {
                     return getValue(valuePtr);
                 }
                 if (wasSet && k == key) {
-                    std::cout << key << " not found in map\n";
-                    exit(1);
+                    std::ostringstream sstr;
+                    sstr << key << " not found in map";
+                    throw gradylibMakeException(sstr.str());
                 }
                 ++idx;
                 idx = idx == keySize ? 0 : idx;
                 if (startIdx == idx) {
-                    std::cout << key << " not found in map\n";
-                    exit(1);
+                    std::ostringstream sstr;
+                    sstr << key << " not found in map";
+                    throw gradylibMakeException(sstr.str());
                 }
             }
-            std::cout << key << " not found in map\n";
-            exit(1);
+            std::ostringstream sstr;
+            sstr << key << " not found in map";
+            throw gradylibMakeException(sstr.str());
         }
 
         bool contains(IndexType key) const {

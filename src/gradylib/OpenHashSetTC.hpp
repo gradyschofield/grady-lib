@@ -135,14 +135,16 @@ namespace gradylib {
         explicit OpenHashSetTC(std::string filename) {
             fd = open(filename.c_str(), O_RDONLY);
             if (fd < 0) {
-                std::cout << "Error opening file " << filename << "\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "Error opening file " << filename;
+                throw gradylibMakeException(sstr.str());
             }
             mappingSize = std::filesystem::file_size(filename);
             memoryMapping = mmap(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
             if (memoryMapping == MAP_FAILED) {
-                std::cout << "memory map failed: " << strerror(errno) << "\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "memory map failed: " << strerror(errno);
+                throw gradylibMakeException(sstr.str());
             }
             std::byte *ptr = static_cast<std::byte *>(memoryMapping);
             setSize = *static_cast<size_t *>(static_cast<void *>(ptr));
@@ -206,8 +208,9 @@ namespace gradylib {
 
         void insert(Key const &key) {
             if (readOnly) {
-                std::cout << "Cannot modify mmap\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "Cannot modify mmap";
+                throw gradylibMakeException(sstr.str());
             }
             size_t hash;
             size_t idx;
@@ -279,8 +282,9 @@ namespace gradylib {
 
         void erase(Key const &key) {
             if (readOnly) {
-                std::cout << "Cannot modify mmap\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "Cannot modify mmap";
+                throw gradylibMakeException(sstr.str());
             }
             size_t hash = hashFunction(key);
             size_t idx = hash % keySize;
@@ -301,8 +305,9 @@ namespace gradylib {
 
         void reserve(size_t size) {
             if (readOnly) {
-                std::cout << "Cannot modify mmap\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "Cannot modify mmap";
+                throw gradylibMakeException(sstr.str());
             }
             rehash(size);
         }
@@ -360,8 +365,9 @@ namespace gradylib {
 
         void clear() {
             if (readOnly) {
-                std::cout << "Can't clear a readonly set\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "Can't clear a readonly set";
+                throw gradylibMakeException(sstr.str());
             }
             setFlags.clear();
             setSize = 0;

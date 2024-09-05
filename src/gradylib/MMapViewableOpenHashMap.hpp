@@ -75,8 +75,9 @@ namespace gradylib {
         MMapViewableOpenHashMap(std::string filename) {
             fd = open(filename.c_str(), O_RDONLY);
             if (fd < 0) {
-                std::cout << "Error opening file " << filename << "\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "Error opening file " << filename;
+                throw gradylibMakeException(sstr.str());
             }
 
             mappingSize = std::filesystem::file_size(filename);
@@ -84,8 +85,9 @@ namespace gradylib {
             if (memoryMapping == MAP_FAILED) {
                 close(fd);
                 memoryMapping = nullptr;
-                std::cout << "memory map failed: " << strerror(errno) << "\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "memory map failed: " << strerror(errno);
+                throw gradylibMakeException(sstr.str());
             }
 
             std::byte const * base = static_cast<std::byte const *>(memoryMapping);
@@ -104,8 +106,9 @@ namespace gradylib {
 
         decltype(auto) at(Key const & key) const {
             if (!valueOffsets.contains(key)) {
-                std::cout << "Map doesn't contain key\n";
-                exit(1);
+                std::ostringstream sstr;
+                sstr << "Map doesn't contain key";
+                throw gradylibMakeException(sstr.str());
             }
             int64_t off = valueOffsets.at(key);
             std::byte const * ptr = valuePtr + valueOffsets.at(key);
@@ -215,8 +218,9 @@ namespace gradylib {
 
                 std::ofstream ofs(filename, std::ios::binary);
                 if (ofs.fail()) {
-                    std::cout << "Unable to open file for writing " << filename << "\n";
-                    exit(1);
+                    std::ostringstream sstr;
+                    sstr << "Unable to open file for writing " << filename;
+                    throw gradylibMakeException(sstr.str());
                 }
 
                 int64_t mapOffset = 0;
