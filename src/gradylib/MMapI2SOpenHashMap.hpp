@@ -54,6 +54,7 @@ namespace gradylib {
         void * memoryMapping = nullptr;
         size_t mappingSize = 0;
         HashFunction<IndexType> hashFunction = HashFunction<IndexType>{};
+        static inline void* (*mmapFunc)(void *, size_t, int, int, int, off_t) = mmap;
 
         std::string_view getValue(std::byte const * ptr) const {
             int32_t len = *static_cast<int32_t const *>(static_cast<void const *>(ptr));
@@ -110,7 +111,7 @@ namespace gradylib {
             return *this;
         }
 
-        explicit MMapI2SOpenHashMap(std::string filename) {
+        explicit MMapI2SOpenHashMap(std::filesystem::path filename) {
             fd = open(filename.c_str(), O_RDONLY);
             if (fd < 0) {
                 std::ostringstream sstr;
@@ -118,7 +119,7 @@ namespace gradylib {
                 throw gradylibMakeException(sstr.str());
             }
             mappingSize = std::filesystem::file_size(filename);
-            memoryMapping = mmap(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
+            memoryMapping = mmapFunc(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
             if (memoryMapping == MAP_FAILED) {
                 close(fd);
                 memoryMapping = nullptr;
@@ -277,7 +278,17 @@ namespace gradylib {
             }
             return ret;
         }
+
+        template<typename, template<typename> typename>
+        friend void GRADY_LIB_MOCK_MMapI2SOpenHashMap_MMAP();
     };
+
+    template<typename IndexType, template<typename> typename HashFunction = std::hash>
+    void GRADY_LIB_MOCK_MMapI2SOpenHashMap_MMAP() {
+        MMapI2SOpenHashMap<IndexType, HashFunction>::mmapFunc = [](void *, size_t, int, int, int, off_t) -> void *{
+            return MAP_FAILED;
+        };
+    }
 }
 
 #endif

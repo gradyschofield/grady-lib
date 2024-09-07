@@ -116,7 +116,7 @@ TEST_CASE("Open hash map") {
 
 }
 
-TEST_CASE("Test MMapI2SOpenHashMap operator[]") {
+TEST_CASE("MMapI2SOpenHashMap operator[]") {
     fs::path tmpPath = filesystem::temp_directory_path();
     fs::path tmpFile = tmpPath / "map.bin";
     gradylib::OpenHashMap<int, string> m;
@@ -132,7 +132,7 @@ TEST_CASE("Test MMapI2SOpenHashMap operator[]") {
     filesystem::remove(tmpFile);
 }
 
-TEST_CASE("Test MMapI2SOpenHashMap contains") {
+TEST_CASE("MMapI2SOpenHashMap contains") {
     fs::path tmpPath = filesystem::temp_directory_path();
     fs::path tmpFile = tmpPath / "map.bin";
     gradylib::OpenHashMap<int, string> m;
@@ -150,7 +150,7 @@ TEST_CASE("Test MMapI2SOpenHashMap contains") {
     filesystem::remove(tmpFile);
 }
 
-TEST_CASE("Test MMapI2SOpenHashMap iterator") {
+TEST_CASE("MMapI2SOpenHashMap iterator") {
     fs::path tmpPath = filesystem::temp_directory_path();
     fs::path tmpFile = tmpPath / "map.bin";
     gradylib::OpenHashMap<int, string> m;
@@ -168,7 +168,7 @@ TEST_CASE("Test MMapI2SOpenHashMap iterator") {
     filesystem::remove(tmpFile);
 }
 
-TEST_CASE("Test MMapI2SOpenHashMap move constructor") {
+TEST_CASE("MMapI2SOpenHashMap move constructor") {
     fs::path tmpPath = filesystem::temp_directory_path();
     fs::path tmpFile = tmpPath / "map.bin";
     gradylib::OpenHashMap<int, string> m;
@@ -185,7 +185,7 @@ TEST_CASE("Test MMapI2SOpenHashMap move constructor") {
     filesystem::remove(tmpFile);
 }
 
-TEST_CASE("Test MMapI2SOpenHashMap move assignment") {
+TEST_CASE("MMapI2SOpenHashMap move assignment") {
     fs::path tmpPath = filesystem::temp_directory_path();
     fs::path tmpFile = tmpPath / "map.bin";
     gradylib::OpenHashMap<int, string> m;
@@ -203,7 +203,7 @@ TEST_CASE("Test MMapI2SOpenHashMap move assignment") {
     filesystem::remove(tmpFile);
 }
 
-TEST_CASE("Test MMapI2SOpenHashMap clone") {
+TEST_CASE("MMapI2SOpenHashMap clone") {
     fs::path tmpPath = filesystem::temp_directory_path();
     fs::path tmpFile = tmpPath / "map.bin";
     gradylib::OpenHashMap<int, string> m;
@@ -220,12 +220,12 @@ TEST_CASE("Test MMapI2SOpenHashMap clone") {
     filesystem::remove(tmpFile);
 }
 
-TEST_CASE("Test MMapI2SOpenHashMap operator[] throws on empty map") {
+TEST_CASE("MMapI2SOpenHashMap operator[] throws on empty map") {
     gradylib::MMapI2SOpenHashMap<int> m;
     REQUIRE_THROWS(m[1] == "abc");
 }
 
-TEST_CASE("Test MMapI2SOpenHashMap operator[] throws on invalid key") {
+TEST_CASE("MMapI2SOpenHashMap operator[] throws on invalid key") {
     fs::path tmpPath = filesystem::temp_directory_path();
     fs::path tmpFile = tmpPath / "map.bin";
     gradylib::OpenHashMap<int, string> m;
@@ -238,7 +238,7 @@ TEST_CASE("Test MMapI2SOpenHashMap operator[] throws on invalid key") {
     filesystem::remove(tmpFile);
 }
 
-TEST_CASE("Test MMapI2SOpenHashMap operator[] throws for removed elements") {
+TEST_CASE("MMapI2SOpenHashMap operator[] throws for removed elements") {
     fs::path tmpPath = filesystem::temp_directory_path();
     fs::path tmpFile = tmpPath / "map.bin";
     gradylib::OpenHashMap<int, string> m;
@@ -253,7 +253,7 @@ TEST_CASE("Test MMapI2SOpenHashMap operator[] throws for removed elements") {
     filesystem::remove(tmpFile);
 }
 
-TEST_CASE("Test MMapI2SOpenHashMap operator[] throws (testing a case where the loop finishes)") {
+TEST_CASE("MMapI2SOpenHashMap operator[] throws (testing a case where the loop finishes)") {
     fs::path tmpPath = filesystem::temp_directory_path();
     fs::path tmpFile = tmpPath / "map.bin";
     gradylib::OpenHashMap<int, string> m;
@@ -265,3 +265,121 @@ TEST_CASE("Test MMapI2SOpenHashMap operator[] throws (testing a case where the l
     filesystem::remove(tmpFile);
 }
 
+template<typename IntType>
+struct IdentityHash {
+    size_t operator()(IntType const &i) const noexcept {
+        return i;
+    }
+};
+
+/*
+ * Using IdentityHash in a few of the following test ensures certain lines are covered in the code
+ */
+
+TEST_CASE("MMapI2SOpenHashMap contains on empty map") {
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    gradylib::OpenHashMap<int, string, IdentityHash> m;
+    gradylib::writeMappable(tmpFile, m);
+    gradylib::MMapI2SOpenHashMap<int, IdentityHash> m2(tmpFile);
+    REQUIRE(m2.size() == m.size());
+    REQUIRE(!m2.contains(0));
+    filesystem::remove(tmpFile);
+}
+
+TEST_CASE("MMapI2SOpenHashMap contains on removed element") {
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    gradylib::OpenHashMap<int, string, IdentityHash> m;
+    m[0] = "abc";
+    m[3] = "def";
+    m[4] = "ghi";
+    m.erase(4);
+    gradylib::writeMappable(tmpFile, m);
+    gradylib::MMapI2SOpenHashMap<int, IdentityHash> m2(tmpFile);
+    REQUIRE(m2.size() == m.size());
+    REQUIRE(!m2.contains(4));
+    filesystem::remove(tmpFile);
+}
+
+TEST_CASE("MMapI2SOpenHashMap iterator operator++ loop") {
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    gradylib::OpenHashMap<int, string, IdentityHash> m;
+    m[0] = "abc";
+    m[1] = "def";
+    m[2] = "ghi";
+    m[3] = "ghi";
+    m.erase(1);
+    m.erase(2);
+    gradylib::writeMappable(tmpFile, m);
+    gradylib::MMapI2SOpenHashMap<int, IdentityHash> m2(tmpFile);
+    REQUIRE(m2.size() == m.size());
+    auto iter = m2.begin();
+    while (iter != m2.end()) {
+        REQUIRE(m.contains(iter.key()));
+        REQUIRE(m[iter.key()] == string(iter.value()));
+        ++iter;
+    }
+    auto copyIter = iter;
+    ++iter;
+    REQUIRE(copyIter == iter);
+    filesystem::remove(tmpFile);
+}
+
+TEST_CASE("MMapI2SOpenHashMap begin on empty map") {
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    gradylib::OpenHashMap<int, string, IdentityHash> m;
+    gradylib::writeMappable(tmpFile, m);
+    gradylib::MMapI2SOpenHashMap<int, IdentityHash> m2(tmpFile);
+    REQUIRE(m2.size() == m.size());
+    auto iter = m2.begin();
+    auto copyIter = iter;
+    ++iter;
+    REQUIRE(copyIter == iter);
+    filesystem::remove(tmpFile);
+}
+
+TEST_CASE("MMapI2SOpenHashMap begin required to scan") {
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    gradylib::OpenHashMap<int, string, IdentityHash> m;
+    m[0] = "abc";
+    m[1] = "def";
+    m[2] = "ghi";
+    m[3] = "ghi";
+    m.erase(0);
+    m.erase(1);
+    gradylib::writeMappable(tmpFile, m);
+    gradylib::MMapI2SOpenHashMap<int, IdentityHash> m2(tmpFile);
+    REQUIRE(m2.size() == m.size());
+    auto iter = m2.begin();
+    while (iter != m2.end()) {
+        REQUIRE(m.contains(iter.key()));
+        REQUIRE(m[iter.key()] == string(iter.value()));
+        ++iter;
+    }
+    auto copyIter = iter;
+    ++iter;
+    REQUIRE(copyIter == iter);
+    filesystem::remove(tmpFile);
+}
+
+TEST_CASE("MMapI2SOpenHashMap open nonexistent file throws") {
+    REQUIRE_THROWS(gradylib::MMapI2SOpenHashMap<int, IdentityHash>("non existent file"));
+}
+
+TEST_CASE("MMapI2SOpenHashMap throw on mmap failure") {
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    gradylib::OpenHashMap<int, string, IdentityHash> m;
+    m[0] = "abc";
+    m[1] = "def";
+    m[2] = "ghi";
+    m[3] = "ghi";
+    gradylib::writeMappable(tmpFile, m);
+    gradylib::GRADY_LIB_MOCK_MMapI2SOpenHashMap_MMAP<int, IdentityHash>();
+    REQUIRE_THROWS(gradylib::MMapI2SOpenHashMap<int, IdentityHash>(tmpFile));
+    filesystem::remove(tmpFile);
+}

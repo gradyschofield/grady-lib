@@ -13,6 +13,7 @@
 
 using namespace std;
 using namespace gradylib;
+namespace fs = std::filesystem;
 
 int64_t myRand() {
     static int64_t x = 578363509162734;
@@ -104,4 +105,39 @@ TEST_CASE("Integer to highly redundant string open hash map") {
     REQUIRE(copyIter == iter);
     endTime = chrono::high_resolution_clock::now();
     cout << "test time: " << chrono::duration_cast<chrono::milliseconds>(endTime-startTime).count() << "\n";
+}
+
+TEST_CASE("MMapI2HRSOpenHashMap at throws on missing element") {
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    MMapI2HRSOpenHashMap<int>::Builder builder;
+    builder.put(1, "abc");
+    REQUIRE_THROWS(builder.at(0));
+    builder.write(tmpFile);
+    MMapI2HRSOpenHashMap<int> m(tmpFile);
+    REQUIRE_THROWS(m.at(0));
+    fs::remove(tmpFile);
+}
+
+TEST_CASE("MMapI2HRSOpenHashMap Builder write throws on bad filename") {
+    fs::path tmpPath = "/__gradylib_nonexistent_dir";
+    fs::path tmpFile = tmpPath / "map.bin";
+    MMapI2HRSOpenHashMap<int>::Builder builder;
+    builder.put(1, "abc");
+    REQUIRE_THROWS( builder.write(tmpFile));
+}
+
+TEST_CASE("MMapI2HRSOpenHashMap constructor throws on nonexistent file") {
+    fs::path tmpPath = "/__gradylib_nonexistent_dir";
+    fs::path tmpFile = tmpPath / "map.bin";
+    REQUIRE_THROWS(MMapI2HRSOpenHashMap<int>(tmpFile));
+}
+TEST_CASE("MMapI2HRSOpenHashMap throw on mmap failure") {
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    MMapI2HRSOpenHashMap<int>::Builder builder;
+    builder.put(0, "abc");
+    builder.write(tmpFile);
+    gradylib::GRADY_LIB_MOCK_MMapI2HRSOpenHashMap_MMAP<int>();
+    REQUIRE_THROWS(gradylib::MMapI2HRSOpenHashMap<int>(tmpFile));
 }

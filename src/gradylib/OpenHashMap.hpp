@@ -523,8 +523,8 @@ namespace gradylib {
         template<typename IndexType>
         friend void writeMappable(std::string filename, OpenHashMap<std::string, IndexType> const & m);
 
-        template<typename IndexType>
-        friend void writeMappable(std::string filename, OpenHashMap<IndexType, std::string> const & m);
+        template<typename IndexType, template<typename> typename HashFunc>
+        friend void writeMappable(std::string filename, OpenHashMap<IndexType, std::string, HashFunc> const & m);
     };
 
 
@@ -573,8 +573,8 @@ namespace gradylib {
         ofs.write(static_cast<char*>(static_cast<void*>(&bitPairSetOffset)), 8);
     }
 
-    template<typename IndexType>
-    void writeMappable(std::string filename, OpenHashMap<IndexType, std::string> const & m) {
+    template<typename IndexType, template<typename> typename HashFunction>
+    void writeMappable(std::string filename, OpenHashMap<IndexType, std::string, HashFunction> const & m) {
         std::ofstream ofs(filename);
         if (ofs.fail()) {
             std::ostringstream sstr;
