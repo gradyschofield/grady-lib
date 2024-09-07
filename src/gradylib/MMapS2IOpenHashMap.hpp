@@ -53,6 +53,7 @@ namespace gradylib {
         int fd = -1;
         void * memoryMapping = nullptr;
         size_t mappingSize = 0;
+        static inline void* (*mmapFunc)(void *, size_t, int, int, int, off_t) = mmap;
 
         std::string_view getKey(std::byte const * ptr) const {
             int32_t len = *static_cast<int32_t const *>(static_cast<void const *>(ptr));
@@ -116,7 +117,7 @@ namespace gradylib {
             return *this;
         }
 
-        explicit MMapS2IOpenHashMap(std::string filename) {
+        explicit MMapS2IOpenHashMap(std::filesystem::path filename) {
             fd = open(filename.c_str(), O_RDONLY);
             if (fd < 0) {
                 std::ostringstream sstr;
@@ -124,7 +125,7 @@ namespace gradylib {
                 throw gradylibMakeException(sstr.str());
             }
             mappingSize = std::filesystem::file_size(filename);
-            memoryMapping = mmap(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
+            memoryMapping = mmapFunc(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
             if (memoryMapping == MAP_FAILED) {
                 close(fd);
                 memoryMapping = nullptr;
@@ -165,16 +166,12 @@ namespace gradylib {
             size_t hash;
             size_t idx;
             size_t startIdx;
-            bool isFirstUnsetIdxSet = false;
 
             hash = std::hash<std::string_view>{}(key);
             idx = hash % keySize;
             startIdx = idx;
             std::byte const *keyPtr = static_cast<std::byte const *>(keys) + keyOffsets[idx];
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
-                if (!isFirstUnsetIdxSet && !isSet) {
-                    isFirstUnsetIdxSet = true;
-                }
                 std::string_view k = getKey(keyPtr);
                 if (isSet && k == key) {
                     return values[idx];
@@ -297,7 +294,17 @@ namespace gradylib {
             }
             return ret;
         }
+
+        template<typename>
+        friend void GRADY_LIB_MOCK_MMapS2IOpenHashMap_MMAP();
     };
+
+    template<typename IndexType>
+    void GRADY_LIB_MOCK_MMapS2IOpenHashMap_MMAP() {
+        MMapS2IOpenHashMap<IndexType>::mmapFunc = [](void *, size_t, int, int, int, off_t) -> void *{
+            return MAP_FAILED;
+        };
+    }
 }
 
 #endif

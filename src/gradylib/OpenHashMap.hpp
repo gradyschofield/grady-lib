@@ -525,6 +525,9 @@ namespace gradylib {
 
         template<typename IndexType, template<typename> typename HashFunc>
         friend void writeMappable(std::string filename, OpenHashMap<IndexType, std::string, HashFunc> const & m);
+
+        template<typename IndexType, template<typename> typename HashFunc>
+        friend void GRADY_LIB_MOCK_OpenHashMap_SET_SECOND_BITS(OpenHashMap<std::string, IndexType, HashFunc> &);
     };
 
 
@@ -609,6 +612,13 @@ namespace gradylib {
 
         ofs.seekp(bitPairSetOffsetWritePos, std::ios::beg);
         ofs.write(static_cast<char*>(static_cast<void*>(&bitPairSetOffset)), 8);
+    }
+
+    template<typename IndexType, template<typename> typename HashFunc>
+    void GRADY_LIB_MOCK_OpenHashMap_SET_SECOND_BITS(OpenHashMap<std::string, IndexType, HashFunc> &m) {
+        for (size_t i = 0; i < m.setFlags.size(); ++i) {
+            m.setFlags.setSecond(i);
+        }
     }
 }
 
