@@ -81,7 +81,6 @@ namespace gradylib {
             fd = m.fd;
             memoryMapping = m.memoryMapping;
             mappingSize = m.mappingSize;
-            m.keyOffsets = nullptr;
             m.keys = nullptr;
             m.values = nullptr;
             m.mapSize = 0;
@@ -101,7 +100,6 @@ namespace gradylib {
             fd = m.fd;
             memoryMapping = m.memoryMapping;
             mappingSize = m.mappingSize;
-            m.keyOffsets = nullptr;
             m.keys = nullptr;
             m.values = nullptr;
             m.mapSize = 0;
@@ -160,17 +158,11 @@ namespace gradylib {
             size_t hash;
             size_t idx;
             size_t startIdx;
-            size_t firstUnsetIdx = -1;
-            bool isFirstUnsetIdxSet = false;
 
             hash = hashFunction(key);
             idx = hash % keySize;
             startIdx = idx;
             for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
-                if (!isFirstUnsetIdxSet && !isSet) {
-                    firstUnsetIdx = idx;
-                    isFirstUnsetIdxSet = true;
-                }
                 IndexType k = keys[idx];
                 if (isSet && k == key) {
                     std::byte const *valuePtr = static_cast<std::byte const *>(values) + valueOffsets[idx];
@@ -224,7 +216,7 @@ namespace gradylib {
             size_t idx;
             MMapI2SOpenHashMap const * container;
         public:
-            const_iterator(size_t idx, MMapI2SOpenHashMap * container)
+            const_iterator(size_t idx, MMapI2SOpenHashMap const * container)
                     : idx(idx), container(container) {
             }
 
@@ -281,7 +273,7 @@ namespace gradylib {
             OpenHashMap<IndexType, std::string> ret;
             ret.reserve(size());
             for (auto && [idx, sview] : *this) {
-                ret.put(idx, sview);
+                ret.put(idx, std::string(sview));
             }
             return ret;
         }

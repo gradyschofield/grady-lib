@@ -89,6 +89,19 @@ TEST_CASE("Integer to highly redundant string open hash map") {
         REQUIRE(m.contains(key));
         REQUIRE(string(m.at(key)) == str);
     }
+    for (auto const & [key, str] : m) {
+        REQUIRE(test.contains(key));
+        REQUIRE(test.at(key) == string(str));
+    }
+    auto iter = m.begin();
+    while (iter != m.end()) {
+        REQUIRE(test.contains(iter.key()));
+        REQUIRE(test.at(iter.key()) == string(iter.value()));
+        ++iter;
+    }
+    auto copyIter = iter;
+    ++iter;
+    REQUIRE(copyIter == iter);
     endTime = chrono::high_resolution_clock::now();
     cout << "test time: " << chrono::duration_cast<chrono::milliseconds>(endTime-startTime).count() << "\n";
 }
