@@ -11,6 +11,7 @@
 
 using namespace gradylib;
 using namespace std;
+namespace fs = std::filesystem;
 
 struct Ser {
     vector<int> x;
@@ -60,6 +61,7 @@ TEST_CASE("Memory mapped viewable object open hash map") {
 
     MMapViewableOpenHashMap<int, vector<int>> dz("viewable.bin");
 
+    REQUIRE(dz.size() == 1);
     REQUIRE(dz.contains(4));
     auto view = dz.at(4);
     REQUIRE(view.size() == 3);
@@ -80,4 +82,82 @@ TEST_CASE("Memory mapped viewable object open hash map") {
     for (int i = 0; i < 3; ++i) {
         REQUIRE(view2.x[i] == i+1);
     }
+}
+
+TEST_CASE("MMapViewableOpenHashMap throws on non-existent file") {
+    REQUIRE_THROWS(gradylib::MMapViewableOpenHashMap<int, vector<int>>("/gradylib_non_existent_filename"));
+}
+
+TEST_CASE("MMapViewableOpenHashMap throws on mmap failure") {
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    gradylib::MMapViewableOpenHashMap<int, vector<int>>::Builder builder;
+    builder.put(1, vector{1, 2, 3});
+    builder.put(2, vector{1, 2, 3});
+    builder.put(3, vector{1, 2, 3});
+    builder.put(4, vector{1, 2, 3});
+    builder.write(tmpFile);
+    gradylib::GRADY_LIB_MOCK_MMapViewableOpenHashMap_MMAP<int, vector<int>>();
+    REQUIRE_THROWS(gradylib::MMapViewableOpenHashMap<int, vector<int>>(tmpFile));
+    gradylib::GRADY_LIB_DEFAULT_MMapViewableOpenHashMap_MMAP<int, vector<int>>();
+    filesystem::remove(tmpFile);
+}
+
+TEST_CASE("MMapViewableOpenHashMap throws on empty map") {
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    gradylib::MMapViewableOpenHashMap<int, vector<int>>::Builder builder;
+    builder.put(1, vector{1, 2, 3});
+    builder.write(tmpFile);
+    gradylib::MMapViewableOpenHashMap<int, vector<int>> m2(tmpFile);
+    REQUIRE_THROWS(m2.at(2));
+    filesystem::remove(tmpFile);
+}
+
+TEST_CASE("MMapViewableOpenHashMap iterator") {
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    gradylib::MMapViewableOpenHashMap<int, vector<int>>::Builder builder;
+    builder.put(1, vector{1, 2, 3});
+    builder.put(2, vector{4, 5, 6});
+    builder.put(3, vector{7, 8, 9});
+    builder.put(4, vector{-1, -2, -3});
+    builder.write(tmpFile);
+    gradylib::MMapViewableOpenHashMap<int, vector<int>> m2(tmpFile);
+    REQUIRE(m2.size() == builder.size());
+    auto iter = m2.begin();
+    while (iter != m2.end()) {
+        REQUIRE(builder.contains(iter.key()));
+        auto && v1 = builder[iter.key()];
+        auto && v2 = iter.value();
+        for (int i = 0; i < v1.size(); ++i) {
+            REQUIRE(v1[i] == v2[i]);
+        }
+        ++iter;
+    }
+    auto iterCopy = iter;
+    ++iter;
+    REQUIRE(iter == iterCopy);
+    filesystem::remove(tmpFile);
+}
+
+TEST_CASE("MMapViewableOpenHashMap iterator operator*") {
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    gradylib::MMapViewableOpenHashMap<int, vector<int>>::Builder builder;
+    builder.put(1, vector{1, 2, 3});
+    builder.put(2, vector{4, 5, 6});
+    builder.put(3, vector{7, 8, 9});
+    builder.put(4, vector{-1, -2, -3});
+    builder.write(tmpFile);
+    gradylib::MMapViewableOpenHashMap<int, vector<int>> m2(tmpFile);
+    REQUIRE(m2.size() == builder.size());
+    for (auto && [idx, v] : m2) {
+        REQUIRE(m2.contains(idx));
+        auto && v1 = builder[idx];
+        for (int i = 0; i < v1.size(); ++i) {
+            REQUIRE(v1[i] == v[i]);
+        }
+    }
+    filesystem::remove(tmpFile);
 }

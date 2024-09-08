@@ -297,6 +297,9 @@ namespace gradylib {
 
         template<typename>
         friend void GRADY_LIB_MOCK_MMapS2IOpenHashMap_MMAP();
+
+        template<typename>
+        friend void GRADY_LIB_DEFAULT_MMapS2IOpenHashMap_MMAP();
     };
 
     template<typename IndexType>
@@ -304,6 +307,11 @@ namespace gradylib {
         MMapS2IOpenHashMap<IndexType>::mmapFunc = [](void *, size_t, int, int, int, off_t) -> void *{
             return MAP_FAILED;
         };
+    }
+
+    template<typename IndexType>
+    void GRADY_LIB_DEFAULT_MMapS2IOpenHashMap_MMAP() {
+        MMapS2IOpenHashMap<IndexType>::mmapFunc = mmap;
     }
 }
 

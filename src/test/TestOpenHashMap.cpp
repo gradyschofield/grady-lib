@@ -573,6 +573,7 @@ TEST_CASE("MMapI2SOpenHashMap throw on mmap failure") {
     gradylib::writeMappable(tmpFile, m);
     gradylib::GRADY_LIB_MOCK_MMapI2SOpenHashMap_MMAP<int, IdentityHash>();
     REQUIRE_THROWS(gradylib::MMapI2SOpenHashMap<int, IdentityHash>(tmpFile));
+    gradylib::GRADY_LIB_DEFAULT_MMapI2SOpenHashMap_MMAP<int, IdentityHash>();
     filesystem::remove(tmpFile);
 }
 
@@ -625,6 +626,7 @@ TEST_CASE("MMapS2IOpenHashMap throw on mmap failure") {
     gradylib::writeMappable(tmpFile, m);
     gradylib::GRADY_LIB_MOCK_MMapS2IOpenHashMap_MMAP<int>();
     REQUIRE_THROWS(gradylib::MMapS2IOpenHashMap<int>(tmpFile));
+    gradylib::GRADY_LIB_DEFAULT_MMapS2IOpenHashMap_MMAP<int>();
     filesystem::remove(tmpFile);
 }
 

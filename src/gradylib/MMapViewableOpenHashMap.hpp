@@ -69,10 +69,11 @@ namespace gradylib {
         int fd = -1;
         size_t mappingSize = 0;
         void const * memoryMapping = nullptr;
+        static inline void* (*mmapFunc)(void *, size_t, int, int, int, off_t) = mmap;
 
     public:
 
-        MMapViewableOpenHashMap(std::string filename) {
+        MMapViewableOpenHashMap(std::filesystem::path filename) {
             fd = open(filename.c_str(), O_RDONLY);
             if (fd < 0) {
                 std::ostringstream sstr;
@@ -81,7 +82,7 @@ namespace gradylib {
             }
 
             mappingSize = std::filesystem::file_size(filename);
-            memoryMapping = mmap(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
+            memoryMapping = mmapFunc(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
             if (memoryMapping == MAP_FAILED) {
                 close(fd);
                 memoryMapping = nullptr;
@@ -129,6 +130,7 @@ namespace gradylib {
         class const_iterator {
             OpenHashMapTC<Key, int64_t, HashFunction>::const_iterator iter;
             MMapViewableOpenHashMap const *container;
+
         public:
             const_iterator(OpenHashMapTC<Key, int64_t, HashFunction>::const_iterator iter, MMapViewableOpenHashMap const * container)
                     : iter(iter), container(container) {
@@ -150,7 +152,7 @@ namespace gradylib {
                 return iter.key();
             }
 
-            Value value() {
+            decltype(auto) value() {
                 return container->at(iter.key());
             }
 
@@ -246,7 +248,25 @@ namespace gradylib {
                 ofs.write(static_cast<char *>(static_cast<void*>(&mapOffset)), 8);
             }
         };
+
+        template<typename, typename, template<typename> typename>
+        friend void GRADY_LIB_MOCK_MMapViewableOpenHashMap_MMAP();
+
+        template<typename, typename, template<typename> typename>
+        friend void GRADY_LIB_DEFAULT_MMapViewableOpenHashMap_MMAP();
     };
+
+    template<typename IndexType, typename IntermediateIndexType = uint32_t, template<typename> typename HashFunction = std::hash>
+    void GRADY_LIB_MOCK_MMapViewableOpenHashMap_MMAP() {
+        MMapViewableOpenHashMap<IndexType, IntermediateIndexType, HashFunction>::mmapFunc = [](void *, size_t, int, int, int, off_t) -> void *{
+            return MAP_FAILED;
+        };
+    }
+
+    template<typename IndexType, typename IntermediateIndexType = uint32_t, template<typename> typename HashFunction = std::hash>
+    void GRADY_LIB_DEFAULT_MMapViewableOpenHashMap_MMAP() {
+        MMapViewableOpenHashMap<IndexType, IntermediateIndexType, HashFunction>::mmapFunc = mmap;
+    }
 }
 
 #endif //GRADY_LIB_MMAPOPENHASHMAPVIEWABLE_HPP
