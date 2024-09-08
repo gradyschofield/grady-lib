@@ -116,6 +116,198 @@ TEST_CASE("Open hash map") {
 
 }
 
+TEST_CASE("OpenHashMap rehash to smaller size") {
+    gradylib::OpenHashMap<int, int> m;
+    m[0] = 0;
+    m[1] = 1;
+    m[2] = 2;
+    m[3] = 3;
+    m.reserve(2);
+    REQUIRE(m.size() == 4);
+    REQUIRE(m[0] == 0);
+    REQUIRE(m[1] == 1);
+    REQUIRE(m[2] == 2);
+    REQUIRE(m[3] == 3);
+}
+
+TEST_CASE("OpenHashMap put") {
+    gradylib::OpenHashMap<int, int> m;
+    m.put(0, 0);
+    m.put(1, 1);
+    m.put(2, 2);
+    m.put(3, 3);
+    REQUIRE(m[0] == 0);
+    m.erase(1);
+    REQUIRE(m.size() == 3);
+    m.put(1, 1);
+    m.put(1, 2);
+    REQUIRE(m.size() == 4);
+    REQUIRE(m[0] == 0);
+    REQUIRE(m[1] == 2);
+    REQUIRE(m[2] == 2);
+    REQUIRE(m[3] == 3);
+}
+
+TEST_CASE("OpenHashMap put string view keys") {
+    gradylib::OpenHashMap<string, int> m;
+    char const * abc = "abc";
+    char const * def = "def";
+    string_view abcv(abc);
+    string_view defv(def);
+    m.put(abcv, 0);
+    m.put(defv, 1);
+    REQUIRE(m[abcv] == 0);
+    m.erase(abcv);
+    REQUIRE(m.size() == 1);
+    m.put(abcv, 1);
+    m.put(abcv, 2);
+    REQUIRE(m.size() == 2);
+    REQUIRE(m[abcv] == 2);
+    REQUIRE(m[defv] == 1);
+}
+
+TEST_CASE("OpenHashMap stringview keys") {
+    gradylib::OpenHashMap<string, int> m;
+    m["abc"] = 0;
+    m["def"] = 1;
+    char const * abc = "abc";
+    char const * def = "def";
+    string_view abcv(abc);
+    string_view defv(def);
+    REQUIRE(m.size() == 2);
+    REQUIRE(m[abcv] == 0);
+    REQUIRE(m[defv] == 1);
+}
+
+TEST_CASE("OpenHashMap stringview keys first insert") {
+    gradylib::OpenHashMap<string, int> m;
+    char const * abc = "abc";
+    char const * def = "def";
+    string_view abcv(abc);
+    string_view defv(def);
+    m[abcv] = 0;
+    m[defv] = 1;
+    REQUIRE(m.size() == 2);
+    REQUIRE(m[abcv] == 0);
+    REQUIRE(m[defv] == 1);
+}
+
+template<typename IntType>
+struct TrashHash {
+    size_t operator()(IntType const &i) const noexcept {
+        return 0;
+    }
+};
+
+TEST_CASE("OpenHashMap put, ensuring a certain loop is covered") {
+    gradylib::OpenHashMap<string, int, TrashHash> m;
+    m.put("abc", 0);
+    m.put("def", 1);
+    m.put("ghi", 2);
+    REQUIRE(m.size() == 3);
+    REQUIRE(m["abc"] == 0);
+    REQUIRE(m["def"] == 1);
+    REQUIRE(m["ghi"] == 2);
+}
+
+TEST_CASE("OpenHashMap contains on empty map") {
+    gradylib::OpenHashMap<string, int> m;
+    REQUIRE(!m.contains("abc"));
+}
+
+TEST_CASE("OpenHashMap contains removed key") {
+    gradylib::OpenHashMap<string, int> m;
+    m.put("abc", 0);
+    m.erase("abc");
+    REQUIRE(!m.contains("abc"));
+}
+
+TEST_CASE("OpenHashMap at throws on empty map") {
+    gradylib::OpenHashMap<string, int> m;
+    REQUIRE_THROWS(m.at("abc"));
+}
+
+TEST_CASE("OpenHashMap at with string view keys") {
+    gradylib::OpenHashMap<string, int> m;
+    char const * abc = "abc";
+    string_view abcv(abc);
+    m[abcv] = 1;
+    REQUIRE(m.at(abcv) == 1);
+}
+
+TEST_CASE("OpenHashMap at throws on removed key") {
+    gradylib::OpenHashMap<string, int> m;
+    m["abc"] = 1;
+    m.erase("abc");
+    REQUIRE_THROWS(m.at("abc") == 1);
+}
+
+TEST_CASE("OpenHashMap at throws on nonexistent key") {
+    gradylib::OpenHashMap<string, int> m;
+    m["abc"] = 1;
+    REQUIRE_THROWS(m.at("def") == 1);
+}
+
+TEST_CASE("OpenHashMap erase empty map") {
+    gradylib::OpenHashMap<string, int> m;
+    m.erase("abc");
+    REQUIRE(m.size() == 0);
+}
+
+TEST_CASE("OpenHashMap iterator") {
+    gradylib::OpenHashMap<int, int> m;
+    m[0] = 0;
+    m[1] = 1;
+    m[2] = 2;
+    m.erase(0);
+    auto doStuff = [](auto && m) {
+        auto iter = m.begin();
+        int i = 0;
+        while (iter != m.end()) {
+            ++i;
+            REQUIRE(iter.value() == m.at(iter.key()));
+            ++iter;
+        }
+        REQUIRE(i == m.size());
+        auto iterCopy = iter;
+        ++iter;
+        REQUIRE(iterCopy == iter);
+    };
+    doStuff(m);
+    doStuff(static_cast<gradylib::OpenHashMap<int, int> const &>(m));
+}
+
+TEST_CASE("OpenHashMap begin on empty map") {
+    gradylib::OpenHashMap<int, int> m;
+    auto doStuff = [](auto && m) {
+        auto iter = m.begin();
+        REQUIRE(iter == m.end());
+    };
+    doStuff(m);
+    doStuff(static_cast<gradylib::OpenHashMap<int, int> const &>(m));
+}
+
+TEST_CASE("OpenHashMap insert previously removed element") {
+    gradylib::OpenHashMap<string, int> m;
+    m["abc"] = 0;
+    m["def"] = 1;
+    m.erase("abc");
+    m["abc"] = 0;
+    REQUIRE(m.size() == 2);
+    REQUIRE(m["abc"] == 0);
+    REQUIRE(m["def"] == 1);
+}
+
+TEST_CASE("OpenHashMap/MMapI2SOpenHashMap writeMappable to bad file") {
+    gradylib::OpenHashMap<int, string> m;
+    REQUIRE_THROWS(gradylib::writeMappable("/gradylib non existent filename", m));
+}
+
+TEST_CASE("OpenHashMap/MMapS2IOpenHashMap writeMappable to bad file") {
+    gradylib::OpenHashMap<string, int> m;
+    REQUIRE_THROWS(gradylib::writeMappable("/gradylib non existent filename", m));
+}
+
 TEST_CASE("MMapI2SOpenHashMap operator[]") {
     fs::path tmpPath = filesystem::temp_directory_path();
     fs::path tmpFile = tmpPath / "map.bin";
