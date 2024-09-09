@@ -57,6 +57,7 @@ namespace gradylib {
         HashFunction<Key> hashFunction = HashFunction<Key>{};
         BitPairSet setFlags;
         bool readOnly = false;
+        static inline void* (*mmapFunc)(void *, size_t, int, int, int, off_t) = mmap;
 
         void rehash(size_t size = 0) {
             size_t newSize;
@@ -125,7 +126,7 @@ namespace gradylib {
 
         OpenHashMapTC(OpenHashMapTC const & m) {
             BitPairSet tmpSetFlags = m.setFlags;
-            std::unique_ptr<Key[]> tmpKeys = new Key[m.keySize];
+            std::unique_ptr<Key[]> tmpKeys(new Key[m.keySize]);
             values = new Value[m.keySize];
             keys = tmpKeys.release();
             std::swap(setFlags, tmpSetFlags);
@@ -158,7 +159,7 @@ namespace gradylib {
                 return *this;
             }
             BitPairSet tmpSetFlags = m.setFlags;
-            std::unique_ptr<Key[]> tmpKeys = new Key[m.keySize];
+            std::unique_ptr<Key[]> tmpKeys(new Key[m.keySize]);
             values = new Value[m.keySize];
             keys = tmpKeys.release();
             std::swap(setFlags, tmpSetFlags);
@@ -207,7 +208,7 @@ namespace gradylib {
             }
         }
 
-        explicit OpenHashMapTC(std::string filename) {
+        explicit OpenHashMapTC(std::filesystem::path filename) {
             fd = open(filename.c_str(), O_RDONLY);
             if (fd < 0) {
                 std::ostringstream ostr;
@@ -215,7 +216,7 @@ namespace gradylib {
                 throw gradylibMakeException(ostr.str());
             }
             mappingSize = std::filesystem::file_size(filename);
-            memoryMapping = mmap(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
+            memoryMapping = mmapFunc(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
             if (memoryMapping == MAP_FAILED) {
                 std::ostringstream sstr;
                 sstr << "memory map failed: " << strerror(errno);
@@ -593,7 +594,25 @@ namespace gradylib {
             ofs.seekp(bitPairSetOffsetPos);
             ofs.write(static_cast<char*>(static_cast<void*>(&bitPairSetOffset)), 8);
         }
+
+        template<typename, typename, template<typename> typename>
+        friend void GRADY_LIB_MOCK_OpenHashMapTC_MMAP();
+
+        template<typename, typename, template<typename> typename>
+        friend void GRADY_LIB_DEFAULT_OpenHashMapTC_MMAP();
     };
+
+    template<typename Key, typename Value, template<typename> typename HashFunction = std::hash>
+    void GRADY_LIB_MOCK_OpenHashMapTC_MMAP() {
+        OpenHashMapTC<Key, Value, HashFunction>::mmapFunc = [](void *, size_t, int, int, int, off_t) -> void *{
+            return MAP_FAILED;
+        };
+    }
+
+    template<typename Key, typename Value, template<typename> typename HashFunction = std::hash>
+    void GRADY_LIB_DEFAULT_OpenHashMapTC_MMAP() {
+        OpenHashMapTC<Key, Value, HashFunction>::mmapFunc = mmap;
+    }
 }
 
 #endif

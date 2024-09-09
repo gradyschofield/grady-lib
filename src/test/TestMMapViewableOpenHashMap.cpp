@@ -161,3 +161,8 @@ TEST_CASE("MMapViewableOpenHashMap iterator operator*") {
     }
     filesystem::remove(tmpFile);
 }
+
+TEST_CASE("MMapViewableOpenHashMap::Builder::write throws on bad file") {
+    gradylib::MMapViewableOpenHashMap<int, vector<int>>::Builder builder;
+    REQUIRE_THROWS(builder.write("/gradylib_nonexistent_file"));
+}

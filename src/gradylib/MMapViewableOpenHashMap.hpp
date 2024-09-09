@@ -207,7 +207,7 @@ namespace gradylib {
                 return m.size();
             }
 
-            void write(std::string filename, int alignment = alignof(void*)) {
+            void write(std::filesystem::path filename, int alignment = alignof(void*)) {
 
                 auto writePad = [pad=std::vector<char>(alignment, 0)](std::ofstream & ofs, int alignment) {
                     int64_t pos = ofs.tellp();
