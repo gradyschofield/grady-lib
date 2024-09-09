@@ -165,3 +165,48 @@ TEST_CASE("OpenHashMapTC constructor from file throws on mmap file") {
     filesystem::remove(tmpFile);
 }
 
+TEST_CASE("OpenHashMapTC operator[] throws when object is readonly") {
+    gradylib::OpenHashMapTC<int, double> m;
+    m[0] = -3;
+    m[1] = 2.313;
+    m[2] = 6.92;
+    m[3] = -1.34E-7;
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    m.write(tmpFile);
+    gradylib::OpenHashMapTC<int, double> m2(tmpFile);
+    REQUIRE_THROWS(m2[0]);
+    filesystem::remove(tmpFile);
+}
+
+template<typename IntType>
+struct TrashHash {
+    size_t operator()(IntType const &i) const noexcept {
+        return 0;
+    }
+};
+
+TEST_CASE("OpenHashMapTC operator[] with elements removed") {
+    gradylib::OpenHashMapTC<int, double, TrashHash> m;
+    m[0] = -3;
+    m[1] = 2.313;
+    m[2] = 6.92;
+    m[3] = -1.34E-7;
+    m.erase(0);
+    m.erase(1);
+    m.erase(2);
+    REQUIRE(m.size() == 1);
+    REQUIRE(m[3] == -1.34E-7);
+}
+
+TEST_CASE("OpenHashMapTC operator[] on previously removed element") {
+    gradylib::OpenHashMapTC<int, double, TrashHash> m;
+    m[0] = -3;
+    m[1] = 2.313;
+    m[2] = 6.92;
+    m[3] = -1.34E-7;
+    m.erase(0);
+    m[0] == -2;
+    REQUIRE(m[0] == -2);
+}
+
