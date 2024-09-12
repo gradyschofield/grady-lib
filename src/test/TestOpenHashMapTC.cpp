@@ -271,3 +271,55 @@ TEST_CASE("OpenHashMapTC at throws on nonexistent element") {
     REQUIRE_THROWS(m.at(1) == 1.0);
 }
 
+TEST_CASE("OpenHashMapTC contains on empty map") {
+    gradylib::OpenHashMapTC<int, double> m;
+    REQUIRE(!m.contains(1) );
+}
+
+TEST_CASE("OpenHashMapTC contains on removed element") {
+    gradylib::OpenHashMapTC<int, double> m;
+    m.put(1, 1.234);
+    m.erase(1);
+    REQUIRE(!m.contains(1) );
+}
+
+TEST_CASE("OpenHashMapTC contains on nonexistent element") {
+    gradylib::OpenHashMapTC<int, double> m;
+    m.put(1, 1.234);
+    REQUIRE(!m.contains(2) );
+}
+
+TEST_CASE("OpenHashMapTC contains on present element") {
+    gradylib::OpenHashMapTC<int, double, TrashHash> m;
+    m.put(0, -3);
+    m.put(1, 2.313);
+    m.put(2, 6.92);
+    m.put(3, -1.34E-7);
+    m.put(0, -2);
+    REQUIRE(m.contains(0));
+    REQUIRE(m.contains(1));
+    REQUIRE(m.contains(2));
+    REQUIRE(m.contains(3));
+}
+
+TEST_CASE("OpenHashMapTC erase throws when object is readonly") {
+    gradylib::OpenHashMapTC<int, double> m;
+    m[0] = -3;
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    m.write(tmpFile);
+    gradylib::OpenHashMapTC<int, double> m2(tmpFile);
+    REQUIRE_THROWS(m2.erase(0));
+    filesystem::remove(tmpFile);
+}
+
+TEST_CASE("OpenHashMapTC erase does nothing on nonexistent element") {
+    gradylib::OpenHashMapTC<int, double, TrashHash> m;
+    m.put(0, -3);
+    m.put(1, 2.313);
+    m.put(2, 6.92);
+    m.put(3, -1.34E-7);
+    m.erase(-1);
+    REQUIRE(m.size() == 4);
+}
+
