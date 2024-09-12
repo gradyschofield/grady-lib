@@ -279,6 +279,7 @@ TEST_CASE("OpenHashMapTC contains on empty map") {
 TEST_CASE("OpenHashMapTC contains on removed element") {
     gradylib::OpenHashMapTC<int, double> m;
     m.put(1, 1.234);
+    m.put(2, 2.234);
     m.erase(1);
     REQUIRE(!m.contains(1) );
 }
@@ -323,3 +324,92 @@ TEST_CASE("OpenHashMapTC erase does nothing on nonexistent element") {
     REQUIRE(m.size() == 4);
 }
 
+TEST_CASE("OpenHashMapTC reserve throws when object is readonly") {
+    gradylib::OpenHashMapTC<int, double> m;
+    m[0] = -3;
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    m.write(tmpFile);
+    gradylib::OpenHashMapTC<int, double> m2(tmpFile);
+    REQUIRE_THROWS(m2.reserve(100));
+    filesystem::remove(tmpFile);
+}
+
+TEST_CASE("OpenHashMapTC iterator") {
+    gradylib::OpenHashMapTC<int, double, TrashHash> m;
+    m[0] = 1.234;
+    m[1] = -4.32E-9;
+    m[2] = 4.84E23;
+    m[3] = 1.32E3;
+    m[4] = 8.99E-4;
+    m.erase(0);
+    m.erase(2);
+    auto doStuff = [](auto && m) {
+        auto iter = m.begin();
+        int i = 0;
+        while (iter != m.end()) {
+            ++i;
+            REQUIRE(iter.value() == m.at(iter.key()));
+            ++iter;
+        }
+        REQUIRE(i == m.size());
+        auto iterCopy = iter;
+        ++iter;
+        REQUIRE(iterCopy == iter);
+    };
+    doStuff(m);
+    doStuff(static_cast<gradylib::OpenHashMapTC<int, double, TrashHash> const &>(m));
+}
+
+TEST_CASE("OpenHashMapTC iterator empty map") {
+    gradylib::OpenHashMapTC<int, double, TrashHash> m;
+    auto doStuff = [](auto && m) {
+        auto iter = m.begin();
+        int i = 0;
+        while (iter != m.end()) {
+            ++i;
+            REQUIRE(iter.value() == m.at(iter.key()));
+            ++iter;
+        }
+        REQUIRE(i == m.size());
+        auto iterCopy = iter;
+        ++iter;
+        REQUIRE(iterCopy == iter);
+    };
+    doStuff(m);
+    doStuff(static_cast<gradylib::OpenHashMapTC<int, double, TrashHash> const &>(m));
+}
+
+TEST_CASE("OpenHashMapTC range for loop") {
+    gradylib::OpenHashMapTC<int, double, TrashHash> m;
+    m[0] = 1.234;
+    m[1] = -4.32E-9;
+    m[2] = 4.84E23;
+    m[3] = 1.32E3;
+    m[4] = 8.99E-4;
+    m.erase(0);
+    m.erase(2);
+    auto doStuff = [](auto && m) {
+        for (auto && [k, v] : m) {
+            REQUIRE(v == m.at(k));
+        }
+    };
+    doStuff(m);
+    doStuff(static_cast<gradylib::OpenHashMapTC<int, double, TrashHash> const &>(m));
+}
+
+TEST_CASE("OpenHashMapTC clear") {
+    gradylib::OpenHashMapTC<int, double, TrashHash> m;
+    m[0] = 1.234;
+    m[1] = -4.32E-9;
+    m[2] = 4.84E23;
+    m[3] = 1.32E3;
+    m[4] = 8.99E-4;
+    m.clear();
+    REQUIRE(!m.contains(0));
+    REQUIRE(!m.contains(1));
+    REQUIRE(!m.contains(2));
+    REQUIRE(!m.contains(3));
+    REQUIRE(!m.contains(4));
+    REQUIRE(m.size() == 0);
+}

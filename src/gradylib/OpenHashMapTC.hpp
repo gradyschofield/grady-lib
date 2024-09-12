@@ -368,7 +368,7 @@ namespace gradylib {
         }
 
         bool contains(Key const &key) const {
-            if (keySize == 0) {
+            if (mapSize == 0) {
                 return false;
             }
             size_t hash = hashFunction(key);
