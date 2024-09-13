@@ -116,6 +116,26 @@ TEST_CASE("OpenHashMapTC assignment operator") {
     }
 }
 
+TEST_CASE("OpenHashMapTC self assignment") {
+    gradylib::OpenHashMapTC<int, double> m;
+    m[0] = -3;
+    m[1] = 2.313;
+    m = m;
+    REQUIRE(m.size() == 2);
+    REQUIRE(m.at(0) == -3);
+    REQUIRE(m.at(1) == 2.313);
+}
+
+TEST_CASE("OpenHashMapTC self move assignment") {
+    gradylib::OpenHashMapTC<int, double> m;
+    m[0] = -3;
+    m[1] = 2.313;
+    m = move(m);
+    REQUIRE(m.size() == 2);
+    REQUIRE(m.at(0) == -3);
+    REQUIRE(m.at(1) == 2.313);
+}
+
 TEST_CASE("OpenHashMapTC move assignment operator") {
     gradylib::OpenHashMapTC<int, double> m;
     m[0] = -3;
@@ -412,4 +432,19 @@ TEST_CASE("OpenHashMapTC clear") {
     REQUIRE(!m.contains(3));
     REQUIRE(!m.contains(4));
     REQUIRE(m.size() == 0);
+}
+
+TEST_CASE("OpenHashMapTC clear throws on empty map") {
+    gradylib::OpenHashMapTC<int, double, TrashHash> m;
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    m.write(tmpFile);
+    gradylib::OpenHashMapTC<int, double> m2(tmpFile);
+    REQUIRE_THROWS(m2.clear());
+    filesystem::remove(tmpFile);
+}
+
+TEST_CASE("OpenHashMapTC write throws on file open failure") {
+    gradylib::OpenHashMapTC<int, double, TrashHash> m;
+    REQUIRE_THROWS(m.write("/gradylib non existent filename"));
 }

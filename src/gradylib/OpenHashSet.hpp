@@ -412,16 +412,16 @@ namespace gradylib {
             return result->promise.get_future();
         }
 
-        template<typename IndexType>
-        friend void writeMappable(std::string filename, OpenHashSet<std::string> const & m);
+        template<template<typename> typename HashFunc>
+        friend void writeMappable(std::string filename, OpenHashSet<std::string, HashFunc> const & m);
 
-        template<typename IndexType>
-        friend void writeMappable(std::string filename, OpenHashSet<IndexType> const & m);
+        template<std::integral IndexType, template<typename> typename HashFunc>
+        friend void writeMappable(std::string filename, OpenHashSet<IndexType, HashFunc> const & m);
     };
 
 
-    template<typename IndexType>
-    void writeMappable(std::string filename, OpenHashSet<std::string> const & m) {
+    template<template<typename> typename HashFunc>
+    void writeMappable(std::filesystem::path filename, OpenHashSet<std::string, HashFunc> const & m) {
         std::ofstream ofs(filename);
         if (ofs.fail()) {
             std::ostringstream sstr;
@@ -457,8 +457,8 @@ namespace gradylib {
         ofs.write(static_cast<char*>(static_cast<void*>(&bitPairSetOffset)), 8);
     }
 
-    template<typename IndexType>
-    void writeMappable(std::string filename, OpenHashSet<IndexType> const & m) {
+    template<std::integral IndexType, template<typename> typename HashFunc>
+    void writeMappable(std::string filename, OpenHashSet<IndexType, HashFunc> const & m) {
         std::ofstream ofs(filename);
         if (ofs.fail()) {
             std::ostringstream sstr;
