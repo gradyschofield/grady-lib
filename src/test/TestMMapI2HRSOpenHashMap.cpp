@@ -141,4 +141,5 @@ TEST_CASE("MMapI2HRSOpenHashMap throw on mmap failure") {
     gradylib::GRADY_LIB_MOCK_MMapI2HRSOpenHashMap_MMAP<int>();
     REQUIRE_THROWS(gradylib::MMapI2HRSOpenHashMap<int>(tmpFile));
     gradylib::GRADY_LIB_DEFAULT_MMapI2HRSOpenHashMap_MMAP<int>();
+    fs::remove(tmpFile);
 }

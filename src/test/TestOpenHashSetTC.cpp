@@ -9,6 +9,7 @@
 
 using namespace std;
 using namespace gradylib;
+namespace fs = std::filesystem;
 
 TEST_CASE("Open hash set on trivially copyable types"){
     auto myRand = []() {
@@ -113,3 +114,107 @@ TEST_CASE("Open hash set on trivially copyable types"){
     cout << "testing from mmap load: " << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << "\n";
 
 }
+
+TEST_CASE("OpenHashSetTC reserve too small size"){
+    OpenHashSetTC<int> s;
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    s.reserve(1);
+    REQUIRE(s.size() == 4);
+    REQUIRE(s.contains(1));
+    REQUIRE(s.contains(2));
+    REQUIRE(s.contains(3));
+    REQUIRE(s.contains(4));
+}
+
+TEST_CASE("OpenHashSetTC constructor throws on bad filename"){
+    REQUIRE_THROWS(OpenHashSetTC<int>("/gradylib nonexistent file"));
+}
+
+TEST_CASE("OpenHashSetTC constructor throws on mmap failure"){
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    OpenHashSetTC<int> s;
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    s.write(tmpFile);
+    GRADY_LIB_MOCK_OpenHashSetTC_MMAP<int>();
+    REQUIRE_THROWS(OpenHashSetTC<int>(tmpFile));
+    GRADY_LIB_DEFAULT_OpenHashSetTC_MMAP<int>();
+    fs::remove(tmpFile);
+}
+
+TEST_CASE("OpenHashSetTC assignment"){
+    OpenHashSetTC<int> s;
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    OpenHashSetTC<int> s2;
+    s2 = s;
+    REQUIRE(s2.size() == 4);
+    REQUIRE(s2.contains(1));
+    REQUIRE(s2.contains(2));
+    REQUIRE(s2.contains(3));
+    REQUIRE(s2.contains(4));
+}
+
+TEST_CASE("OpenHashSetTC self assignment"){
+    OpenHashSetTC<int> s;
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    OpenHashSetTC<int> s2;
+    s = s;
+    REQUIRE(s.size() == 4);
+    REQUIRE(s.contains(1));
+    REQUIRE(s.contains(2));
+    REQUIRE(s.contains(3));
+    REQUIRE(s.contains(4));
+}
+
+TEST_CASE("OpenHashSetTC assignment of readonly map fails"){
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    OpenHashSetTC<int> s;
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    s.write(tmpFile);
+    OpenHashSetTC<int> s2(tmpFile);
+    OpenHashSetTC<int> s3;
+    REQUIRE_THROWS(s3 = s2);
+    fs::remove(tmpFile);
+}
+
+TEST_CASE("OpenHashSetTC move assignment"){
+    OpenHashSetTC<int> s;
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    OpenHashSetTC<int> s2;
+    s2 = move(s);
+    REQUIRE(s2.size() == 4);
+    REQUIRE(s2.contains(1));
+    REQUIRE(s2.contains(2));
+    REQUIRE(s2.contains(3));
+    REQUIRE(s2.contains(4));
+    REQUIRE(s.size() == 0);
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    REQUIRE(s.size() == 4);
+    REQUIRE(s.contains(1));
+    REQUIRE(s.contains(2));
+    REQUIRE(s.contains(3));
+    REQUIRE(s.contains(4));
+}
+

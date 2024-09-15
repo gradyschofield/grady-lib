@@ -79,6 +79,19 @@ namespace gradylib {
         void *memoryMapping = nullptr;
         bool readOnly = false;
         HashFunction<Key> hashFunction = HashFunction<Key>{};
+        static inline void* (*mmapFunc)(void *, size_t, int, int, int, off_t) = mmap;
+
+        void freeResources() {
+            if (memoryMapping) {
+                munmap(memoryMapping, mappingSize);
+                close(fd);
+                memoryMapping = nullptr;
+                fd = -1;
+            } else {
+                delete[] keys;
+                keys = nullptr;
+            }
+        }
 
         void rehash(size_t size = 0) {
             size_t newSize;
@@ -140,7 +153,7 @@ namespace gradylib {
                 throw gradylibMakeException(sstr.str());
             }
             mappingSize = std::filesystem::file_size(filename);
-            memoryMapping = mmap(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
+            memoryMapping = mmapFunc(0, mappingSize, PROT_READ, MAP_SHARED, fd, 0);
             if (memoryMapping == MAP_FAILED) {
                 std::ostringstream sstr;
                 sstr << "memory map failed: " << strerror(errno);
@@ -163,20 +176,21 @@ namespace gradylib {
         }
 
         ~OpenHashSetTC() {
-            if (memoryMapping) {
-                munmap(memoryMapping, mappingSize);
-                close(fd);
-            } else {
-                delete[] keys;
-            }
+            freeResources();
         }
 
         OpenHashSetTC &operator=(OpenHashSetTC const &s) {
+            if (s.readOnly) {
+                std::ostringstream ostr;
+                ostr << "Can't copy readonly OpenHashSetTC";
+                throw gradylibMakeException(ostr.str());
+            }
             if (this == &s) {
                 return *this;
             }
+            freeResources();
             keys = new Key[s.keySize];
-            memcpy(keys, s.keys, sizeof(Key) * keySize);
+            memcpy(keys, s.keys, sizeof(Key) * s.keySize);
             keySize = s.keySize;
             setFlags = s.setFlags;
             loadFactor = s.loadFactor;
@@ -206,10 +220,13 @@ namespace gradylib {
             return *this;
         }
 
-        void insert(Key const &key) {
+        template<typename KeyType>
+        requires std::is_convertible_v<KeyType, Key>
+        void insert(KeyType && keyArg) {
+            Key key{keyArg};
             if (readOnly) {
                 std::ostringstream sstr;
-                sstr << "Cannot modify mmap";
+                sstr << "Cannot modify set";
                 throw gradylibMakeException(sstr.str());
             }
             size_t hash;
@@ -306,7 +323,7 @@ namespace gradylib {
         void reserve(size_t size) {
             if (readOnly) {
                 std::ostringstream sstr;
-                sstr << "Cannot modify mmap";
+                sstr << "Cannot modify set";
                 throw gradylibMakeException(sstr.str());
             }
             rehash(size);
@@ -385,7 +402,7 @@ namespace gradylib {
          * 8 underlying array size
          * 4 * underlying array size
          */
-        void write(std::string filename, int alignment = alignof(void*)) {
+        void write(std::filesystem::path filename, int alignment = alignof(void*)) {
             std::ofstream ofs(filename, std::ios::binary);
             ofs.write((char *) &setSize, 8);
             ofs.write((char *) &keySize, 8);
@@ -411,7 +428,24 @@ namespace gradylib {
             setFlags.write(ofs);
         }
 
+        template<typename, template<typename> typename>
+        friend void GRADY_LIB_MOCK_OpenHashSetTC_MMAP();
+
+        template<typename, template<typename> typename>
+        friend void GRADY_LIB_DEFAULT_OpenHashSetTC_MMAP();
     };
+
+    template<typename Key, template<typename> typename HashFunction = std::hash>
+    void GRADY_LIB_MOCK_OpenHashSetTC_MMAP() {
+        OpenHashSetTC<Key, HashFunction>::mmapFunc = [](void *, size_t, int, int, int, off_t) -> void *{
+            return MAP_FAILED;
+        };
+    }
+
+    template<typename Key, template<typename> typename HashFunction = std::hash>
+    void GRADY_LIB_DEFAULT_OpenHashSetTC_MMAP() {
+        OpenHashSetTC<Key, HashFunction>::mmapFunc = mmap;
+    }
 }
 
 #endif
