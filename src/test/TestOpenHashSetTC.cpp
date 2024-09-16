@@ -11,7 +11,7 @@ using namespace std;
 using namespace gradylib;
 namespace fs = std::filesystem;
 
-TEST_CASE("Open hash set on trivially copyable types"){
+TEST_CASE("OpenHashSetTC on trivially copyable types"){
     auto myRand = []() {
         return rand() % 100000000;
     };
@@ -216,5 +216,175 @@ TEST_CASE("OpenHashSetTC move assignment"){
     REQUIRE(s.contains(2));
     REQUIRE(s.contains(3));
     REQUIRE(s.contains(4));
+}
+
+TEST_CASE("OpenHashSetTC move constructor"){
+    OpenHashSetTC<int> s;
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    OpenHashSetTC<int> s2(move(s));
+    REQUIRE(s2.size() == 4);
+    REQUIRE(s2.contains(1));
+    REQUIRE(s2.contains(2));
+    REQUIRE(s2.contains(3));
+    REQUIRE(s2.contains(4));
+    REQUIRE(s.size() == 0);
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    REQUIRE(s.size() == 4);
+    REQUIRE(s.contains(1));
+    REQUIRE(s.contains(2));
+    REQUIRE(s.contains(3));
+    REQUIRE(s.contains(4));
+}
+
+TEST_CASE("OpenHashSetTC insert into readonly map throws"){
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    OpenHashSetTC<int> s;
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    s.write(tmpFile);
+    OpenHashSetTC<int> s2(tmpFile);
+    REQUIRE_THROWS(s2.insert(5));
+    fs::remove(tmpFile);
+}
+
+template<typename IntType>
+struct TrashHash {
+    size_t operator()(IntType const &i) const noexcept {
+        return 0;
+    }
+};
+
+TEST_CASE("OpenHashSetTC contains on erased key"){
+    OpenHashSetTC<int, TrashHash> s;
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    s.erase(2);
+    REQUIRE(!s.contains(2));
+}
+
+TEST_CASE("OpenHashSetTC contains on empty set (for coverage)"){
+    OpenHashSetTC<int> s;
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    REQUIRE(!s.contains(5));
+}
+
+TEST_CASE("OpenHashSetTC erase on readonly map throws"){
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    OpenHashSetTC<int> s;
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    s.write(tmpFile);
+    OpenHashSetTC<int> s2(tmpFile);
+    REQUIRE_THROWS(s2.erase(4));
+    fs::remove(tmpFile);
+}
+
+TEST_CASE("OpenHashSetTC reserve throws on readonly map"){
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    OpenHashSetTC<int> s;
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    s.write(tmpFile);
+    OpenHashSetTC<int> s2(tmpFile);
+    REQUIRE_THROWS(s2.reserve(10));
+    fs::remove(tmpFile);
+}
+
+TEST_CASE("OpenHashSetTC iterator on empty map"){
+    OpenHashSetTC<int> s;
+    auto iter = s.begin();
+    ++iter;
+    REQUIRE(iter == s.end());
+}
+
+TEST_CASE("OpenHashSetTC clear throws on readonly map"){
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    OpenHashSetTC<int> s;
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    s.write(tmpFile);
+    OpenHashSetTC<int> s2(tmpFile);
+    REQUIRE_THROWS(s2.clear());
+    fs::remove(tmpFile);
+}
+
+TEST_CASE("OpenHashSetTC clear"){
+    OpenHashSetTC<int> s;
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    s.clear();
+    REQUIRE(s.size() == 0);
+}
+
+struct Key {
+    char key[17];
+
+    Key() {
+    }
+
+    Key(int i) {
+        key[0] = i;
+    }
+
+    bool operator==(Key const & k) const {
+        return key[0] == k.key[0];
+    }
+};
+
+template<typename KeyType>
+struct KeyHash {
+    size_t operator()(KeyType const &i) const noexcept {
+        return 0;
+    }
+};
+
+template<>
+struct KeyHash<Key> {
+    size_t operator()(Key const &i) const noexcept {
+        return i.key[0];
+    }
+};
+
+TEST_CASE("OpenHashSetTC write (testing padding paths)"){
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    OpenHashSetTC<Key, KeyHash> s;
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    s.write(tmpFile);
+    OpenHashSetTC<Key, KeyHash> s2(tmpFile);
+    REQUIRE(s2.size() == 4);
+    REQUIRE(s2.contains(1));
+    REQUIRE(s2.contains(2));
+    REQUIRE(s2.contains(3));
+    REQUIRE(s2.contains(4));
+    fs::remove(tmpFile);
 }
 

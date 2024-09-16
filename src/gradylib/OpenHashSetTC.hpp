@@ -65,7 +65,7 @@ SOFTWARE.
 namespace gradylib {
 
     template<typename Key, template<typename> typename HashFunction = std::hash>
-    requires std::is_trivially_copyable_v<Key> && std::is_default_constructible_v<Key>
+    requires std::is_trivially_copyable_v<Key> && std::is_default_constructible_v<Key> && std::equality_comparable<Key>
     class OpenHashSetTC {
 
         Key *keys = nullptr;
