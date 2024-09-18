@@ -39,7 +39,7 @@ SOFTWARE.
 namespace gradylib {
 
     template<typename Key, template<typename> typename HashFunction = std::hash>
-    requires std::is_default_constructible_v<Key>
+    requires std::is_default_constructible_v<Key> && std::equality_comparable<Key>
     class OpenHashSet;
 
     template<typename Key, template<typename> typename HashFunction>
@@ -50,7 +50,7 @@ namespace gradylib {
     }
 
     template<typename Key, template<typename> typename HashFunction>
-    requires std::is_default_constructible_v<Key>
+    requires std::is_default_constructible_v<Key> && std::equality_comparable<Key>
     class OpenHashSet {
 
         std::vector<Key> keys;
