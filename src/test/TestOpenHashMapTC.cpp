@@ -448,3 +448,23 @@ TEST_CASE("OpenHashMapTC write throws on file open failure") {
     gradylib::OpenHashMapTC<int, double, TrashHash> m;
     REQUIRE_THROWS(m.write("/gradylib non existent filename"));
 }
+
+TEST_CASE("OpenHashMapTC ifstream constructor") {
+    gradylib::OpenHashMapTC<int, double> m;
+    m[0] = -3;
+    m[1] = 2.313;
+    m[2] = 6.92;
+    m[3] = -1.34E-7;
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    m.write(tmpFile);
+    ifstream ifs(tmpFile);
+    gradylib::OpenHashMapTC<int, double> m2(ifs);
+    REQUIRE(m.size() == 4);
+    REQUIRE(m.at(0) == -3);
+    REQUIRE(m.at(1) == 2.313);
+    REQUIRE(m.at(2) == 6.92);
+    REQUIRE(m.at(3) == -1.34E-7);
+    filesystem::remove(tmpFile);
+}
+

@@ -104,6 +104,13 @@ namespace gradylib {
                   readOnly(true) {
         }
 
+        BitPairSet(std::ifstream & ifs) {
+            ifs.read(static_cast<char*>(static_cast<void*>(&setSize)), sizeof(setSize));
+            size_t len = getUnderlyingLength(setSize);
+            underlying = new UnderlyingInt[len];
+            ifs.read(static_cast<char*>(static_cast<void*>(underlying)), sizeof(UnderlyingInt) * len);
+        }
+
         ~BitPairSet() {
             if (!readOnly) {
                 delete[] underlying;

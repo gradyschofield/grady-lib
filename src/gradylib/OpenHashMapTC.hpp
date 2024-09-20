@@ -225,6 +225,24 @@ namespace gradylib {
             setFromMemoryMapping(memoryMapping);
         }
 
+        explicit OpenHashMapTC(std::ifstream & ifs) {
+            ifs.read(static_cast<char*>(static_cast<void*>(&mapSize)), sizeof(mapSize));
+            ifs.read(static_cast<char*>(static_cast<void*>(&keySize)), sizeof(keySize));
+            ifs.read(static_cast<char*>(static_cast<void*>(&loadFactor)), sizeof(loadFactor));
+            ifs.read(static_cast<char*>(static_cast<void*>(&growthFactor)), sizeof(growthFactor));
+            size_t valueOffset;
+            ifs.read(static_cast<char*>(static_cast<void*>(&valueOffset)), sizeof(valueOffset));
+            size_t bitPairSetOffset;
+            ifs.read(static_cast<char*>(static_cast<void*>(&bitPairSetOffset)), sizeof(bitPairSetOffset));
+            keys = new Key[keySize];
+            ifs.read(static_cast<char*>(static_cast<void*>(keys)), sizeof(Key) * keySize);
+            values = new Value[keySize];
+            ifs.seekg(valueOffset);
+            ifs.read(static_cast<char*>(static_cast<void*>(values)), sizeof(Value) * keySize);
+            ifs.seekg(bitPairSetOffset);
+            setFlags = BitPairSet(ifs);
+        }
+
         explicit OpenHashMapTC(char const * startPtr)
             : OpenHashMapTC(std::string(startPtr))
         {
