@@ -388,3 +388,22 @@ TEST_CASE("OpenHashSetTC write (testing padding paths)"){
     fs::remove(tmpFile);
 }
 
+TEST_CASE("OpenHashSetTC ifstream constructor"){
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    OpenHashSetTC<Key, KeyHash> s;
+    s.insert(1);
+    s.insert(2);
+    s.insert(3);
+    s.insert(4);
+    s.write(tmpFile);
+    ifstream ifs(tmpFile);
+    OpenHashSetTC<Key, KeyHash> s2(ifs);
+    REQUIRE(s2.size() == 4);
+    REQUIRE(s2.contains(1));
+    REQUIRE(s2.contains(2));
+    REQUIRE(s2.contains(3));
+    REQUIRE(s2.contains(4));
+    fs::remove(tmpFile);
+}
+

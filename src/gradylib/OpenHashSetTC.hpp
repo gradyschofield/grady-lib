@@ -175,6 +175,19 @@ namespace gradylib {
             readOnly = true;
         }
 
+        explicit OpenHashSetTC(std::ifstream & ifs) {
+            ifs.read(static_cast<char*>(static_cast<void*>(&setSize)), sizeof(setSize));
+            ifs.read(static_cast<char*>(static_cast<void*>(&keySize)), sizeof(keySize));
+            ifs.read(static_cast<char*>(static_cast<void*>(&loadFactor)), sizeof(loadFactor));
+            ifs.read(static_cast<char*>(static_cast<void*>(&growthFactor)), sizeof(growthFactor));
+            size_t bitPairSetOffset;
+            ifs.read(static_cast<char*>(static_cast<void*>(&bitPairSetOffset)), sizeof(bitPairSetOffset));
+            keys = new Key[keySize];
+            ifs.read(static_cast<char*>(static_cast<void*>(keys)), sizeof(Key) * keySize);
+            ifs.seekg(bitPairSetOffset);
+            setFlags = BitPairSet(ifs);
+        }
+
         ~OpenHashSetTC() {
             freeResources();
         }
