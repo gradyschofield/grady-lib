@@ -33,19 +33,15 @@ struct Ser {
     }
 };
 
-//It's necessary to put serialize in the std namespace so the function can be found by argument dependent lookup
-namespace std {
-    void serialize(ofstream &ofs, vector<int> const & v) {
+// These need to be in the same namespace as vector<int> for ADL to find them
+namespace std{
+    void serialize(ostream &os, vector<int> const & v) {
         size_t n = v.size();
-        ofs.write(static_cast<char*>(static_cast<void*>(&n)), sizeof(n));
-        ofs.write(static_cast<char*>(static_cast<void *>(const_cast<int*>(v.data()))), sizeof(int) * n);
+        os.write(static_cast<char*>(static_cast<void*>(&n)), sizeof(n));
+        os.write(static_cast<char*>(static_cast<void *>(const_cast<int*>(v.data()))), sizeof(int) * n);
     }
 
-    template<typename Value>
-    decltype(auto) makeView(std::byte const * ptr);
-
-    template<>
-    decltype(auto) makeView<vector<int>>(std::byte const * ptr) {
+    decltype(auto) makeView(std::byte const * ptr, vector<int> const *) {
         size_t n = *static_cast<size_t const *>(static_cast<void const *>(ptr));
         ptr += sizeof(size_t);
         return std::span(static_cast<int const *>(static_cast<void const *>(ptr)), n);

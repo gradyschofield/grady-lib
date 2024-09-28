@@ -32,6 +32,7 @@ SOFTWARE.
 #include<functional>
 #include<fstream>
 #include<string>
+#include<utility>
 
 #include"OpenHashMap.hpp"
 #include"OpenHashMapTC.hpp"
@@ -50,7 +51,7 @@ namespace gradylib {
 
     template<typename ValueType>
     concept viewable_global = requires (std::byte const * ptr) {
-        makeView<ValueType>(ptr);
+        makeView(ptr, std::declval<ValueType*>());
     };
 
     template<typename ValueType>
@@ -111,10 +112,10 @@ namespace gradylib {
                 sstr << "Map doesn't contain key";
                 throw gradylibMakeException(sstr.str());
             }
-            int64_t off = valueOffsets.at(key);
             std::byte const * ptr = valuePtr + valueOffsets.at(key);
             if constexpr (viewable_global<Value>) {
-                return makeView<Value>(ptr);
+                Value const * typePtr = nullptr;
+                return makeView(ptr, typePtr);
             } else {
                 return Value::makeView(ptr);
             }
@@ -179,8 +180,8 @@ namespace gradylib {
         public:
 
             template<typename KeyType, typename ValueType>
-            requires (serializable_global<ValueType> || serializable_method<ValueType>) &&
-                    (viewable_global<ValueType> || viewable_method<ValueType>) &&
+            requires (serializable_global<std::remove_cvref_t<ValueType>> || serializable_method<std::remove_cvref_t<ValueType>>) &&
+                    (viewable_global<std::remove_cvref_t<ValueType>> || viewable_method<std::remove_cvref_t<ValueType>>) &&
                     (std::is_same_v<std::remove_cvref_t<KeyType>, Key> || std::is_convertible_v<std::remove_cvref_t<KeyType>, Key>) &&
                     std::is_same_v<std::remove_cvref_t<ValueType>, Value>
             void put(KeyType && key, ValueType && value) {
