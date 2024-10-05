@@ -63,24 +63,31 @@ namespace gradylib {
         void rehash(size_t size = 0) {
             size_t newSize;
             if (size > 0) {
+                // The user called rehash with a parameter that wouldn't fit the current contents.  Do nothing.
                 if (size < mapSize) {
                     return;
                 }
                 newSize = size / loadFactor;
             } else {
-                newSize = std::max<size_t>(keys.size() + 1, std::max<size_t>(1, keys.size()) * growthFactor);
+                // Increase the map size by a factor of growthFactor, ensuring the new size is at least one greater than the old size
+                newSize = std::max<size_t>(keys.size() + 1, keys.size() * growthFactor);
             }
+            // Use of vector here is one reason to require default constructibility in the Key and the Value. Vector's usage also
+            // prevents us from using C style arrays as keys to their non-assignability. Maybe implement our own array container
+            // to get around this.
             std::vector<Key> newKeys(newSize);
             std::vector<Value> newValues(newSize);
             BitPairSet newSetFlags(newSize);
             if (mapSize > 0) {
                 for (size_t i = 0; i < keys.size(); ++i) {
                     if (!setFlags.isFirstSet(i)) {
+                        // In the current map, this entry is empty
                         continue;
                     }
                     Key & k = keys[i];
                     size_t hash = hashFunction(k);
                     size_t idx = hash % newKeys.size();
+                    // Scan the new map for a free space
                     while (newSetFlags.isFirstSet(idx)) {
                         ++idx;
                         idx = idx == newKeys.size() ? 0 : idx;
@@ -111,49 +118,68 @@ namespace gradylib {
         Value &operator[](KeyType && key) {
             size_t hash = 0;
             size_t idx = 0;
-            size_t startIdx = 0;
-            size_t firstUnsetIdx = -1;
-            bool isFirstUnsetIdxSet = false;
+            // We will have a few opportunities to find the insertion point, with the first available slot taking precedence.
+            // Hence, the appearance of insertionIdx = insertionIdx.value_or(idx) in a few places.
+            std::optional<size_t> insertionIdx;
             if (!keys.empty()) {
+                // Handle the case where string_views are passed to this method for an OpenHashMap<string, *>
                 if constexpr (std::same_as<Key, std::string> && std::same_as<std::remove_cvref_t<KeyType>, std::string_view>) {
                     hash = HashFunction<std::string_view>{}(key);
                 } else {
                     hash = hashFunction(key);
                 }
                 idx = hash % keys.size();
-                startIdx = idx;
-                for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
-                    if (!isFirstUnsetIdxSet && !isSet) {
-                        firstUnsetIdx = idx;
-                        isFirstUnsetIdxSet = true;
+                size_t startIdx = idx;
+                auto [isSet, wasSet] = setFlags[idx];
+                // Scan the key array until the key is found in a 'set' slot or a never-before-set slot is found.
+                for (; wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
+                    if (!insertionIdx.has_value() && !isSet) {
+                        // We can't stop iterating here.  We may still find the key later.  If not, this is where we will put the key.
+                        insertionIdx = idx;
                     }
-                    if (isSet && keys[idx] == key) {
-                        return values[idx];
-                    }
-                    if (wasSet && keys[idx] == key) {
+                    if (keys[idx] == key) {
+                        if (isSet) {
+                            return values[idx];
+                        }
+                        // The key was here, but it has been removed.  We can stop because it can't be found later in the map.
+                        insertionIdx = insertionIdx.value_or(idx);
                         break;
                     }
                     ++idx;
+                    // Wrap around
                     idx = idx == keys.size() ? 0 : idx;
+                    // Stop if we've covered every element.  The key is missing.
                     if (startIdx == idx) break;
                 }
+                if (!wasSet) {
+                    insertionIdx = insertionIdx.value_or(idx);
+                }
             }
-            if (mapSize >= keys.size() * loadFactor) {
+            // If we have wrapped all the way around, insertionIdx may not be set.
+            // However, in this case the map is full so we will go into the next conditional and do a rehash.
+            // A new valid location will be produced by this.
+            if (mapSize >= static_cast<size_t>(keys.size() * loadFactor)) {
                 rehash();
+                // Handle the case where string_views are passed to this method for an OpenHashMap<string, *>
                 if constexpr (std::same_as<Key, std::string> && std::same_as<std::remove_cvref_t<KeyType>, std::string_view>) {
                     hash = HashFunction<std::string_view>{}(key);
                 } else {
                     hash = hashFunction(key);
                 }
                 idx = hash % keys.size();
-                startIdx = idx;
+                size_t startIdx = idx;
+                // Do another scan to find the insertion point in the rehashed map.
                 while (setFlags.isFirstSet(idx)) {
                     ++idx;
                     idx = idx == keys.size() ? 0 : idx;
                     if (startIdx == idx) break;
                 }
-            } else {
-                idx = isFirstUnsetIdxSet ? firstUnsetIdx : idx;
+                insertionIdx = idx;
+            }
+            idx = insertionIdx.value();
+            if (setFlags.isSecondSet(idx)) {
+                // This slot was previously set and has some spurious value in it.  Let's set it back to default.
+                values[idx] = Value{};
             }
             setFlags.setBoth(idx);
             keys[idx] = std::forward<KeyType>(key);
@@ -169,57 +195,63 @@ namespace gradylib {
         void put(KeyType && key, ValueType && value) {
             size_t hash = 0;
             size_t idx = 0;
-            bool doesContain = false;
-            size_t firstUnsetIdx = -1;
-            bool isFirstUnsetIdxSet = false;
-            size_t startIdx = idx;
+            // We will have a few opportunities to find the insertion point, with the first available slot taking precedence.
+            // Hence, the appearance of insertionIdx = insertionIdx.value_or(idx) in a few places.
+            std::optional<size_t> insertionIdx;
             if (keys.size() > 0) {
+                // Handle the case where string_views are passed to this method for an OpenHashMap<string, *>
                 if constexpr (std::same_as<Key, std::string> && std::same_as<std::remove_cvref_t<KeyType>, std::string_view>) {
                     hash = HashFunction<std::string_view>{}(key);
                 } else {
                     hash = hashFunction(key);
                 }
                 idx = hash % keys.size();
-                startIdx = idx;
-                for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
-                    if (!isFirstUnsetIdxSet && !isSet) {
-                        firstUnsetIdx = idx;
-                        isFirstUnsetIdxSet = true;
+                size_t startIdx = idx;
+                auto [isSet, wasSet] = setFlags[idx];
+                // Scan the key array until either the key is found in a 'set' slot or a never-before-set slot is found.
+                for (; wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
+                    if (!insertionIdx.has_value() && !isSet) {
+                        // We can't stop iterating here.  We may still find the key later.  If not, this is where we will put the key.
+                        insertionIdx = idx;
                     }
-                    if (isSet && keys[idx] == key) {
-                        values[idx] = std::forward<ValueType>(value);
-                        doesContain = true;
-                        break;
-                    }
-                    if (wasSet && keys[idx] == key) {
-                        doesContain = false;
+                    if (keys[idx] == key) {
+                        if (isSet) {
+                            values[idx] = std::forward<ValueType>(value);
+                            return;
+                        }
+                        // The key was here, but it has been removed.  We can stop because it can't be found later in the map.
+                        insertionIdx = insertionIdx.value_or(idx);
                         break;
                     }
                     ++idx;
+                    // Wrap around
                     idx = idx == keys.size() ? 0 : idx;
+                    // Stop if we've covered every element.  The key is missing.
                     if (startIdx == idx) break;
                 }
+                if (!wasSet) {
+                    insertionIdx = insertionIdx.value_or(idx);
+                }
             }
-            if (doesContain) {
-                return;
-            }
-            if (mapSize >= keys.size() * loadFactor) {
+            if (mapSize >= static_cast<size_t>(keys.size() * loadFactor)) {
                 rehash();
+                // Handle the case where string_views are passed to this method for an OpenHashMap<string, *>
                 if constexpr (std::same_as<Key, std::string> && std::same_as<std::remove_cvref_t<KeyType>, std::string_view>) {
                     hash = HashFunction<std::string_view>{}(key);
                 } else {
                     hash = hashFunction(key);
                 }
                 idx = hash % keys.size();
-                startIdx = idx;
+                size_t startIdx = idx;
+                // Do another scan to find the insertion point in the rehashed map.
                 while (setFlags.isFirstSet(idx)) {
                     ++idx;
                     idx = idx == keys.size() ? 0 : idx;
                     if (startIdx == idx) break;
                 }
-            } else {
-                idx = isFirstUnsetIdxSet ? firstUnsetIdx : idx;
+                insertionIdx = idx;
             }
+            idx = insertionIdx.value();
             setFlags.setBoth(idx);
             keys[idx] = std::forward<KeyType>(key);
             values[idx] = std::forward<ValueType>(value);
@@ -234,7 +266,8 @@ namespace gradylib {
             if (keys.size() == 0) {
                 return false;
             }
-            size_t hash;
+            size_t hash = 0;
+            // Handle the case where string_views are passed to this method for an OpenHashMap<string, *>
             if constexpr (std::same_as<Key, std::string> && std::same_as<std::remove_cvref_t<KeyType>, std::string_view>) {
                 hash = HashFunction<std::string_view>{}(key);
             } else {
@@ -242,15 +275,17 @@ namespace gradylib {
             }
             size_t idx = hash % keys.size();
             size_t startIdx = idx;
-            for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
-                if (isSet && keys[idx] == key) {
-                    return true;
-                }
-                if (wasSet && keys[idx] == key) {
+            for (auto [isSet, wasSet] = setFlags[idx]; wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
+                if (keys[idx] == key) {
+                    if (isSet) {
+                        return true;
+                    }
                     return false;
                 }
                 ++idx;
+                // Wrap around
                 idx = idx == keys.size() ? 0 : idx;
+                // Stop if we've covered every element.
                 if (startIdx == idx) break;
             }
             return false;
@@ -266,7 +301,8 @@ namespace gradylib {
                 sstr << "OpenHashMap doesn't contain key";
                 throw gradylibMakeException(sstr.str());
             }
-            size_t hash;
+            size_t hash = 0;
+            // Handle the case where string_views are passed to this method for an OpenHashMap<string, *>
             if constexpr (std::same_as<Key, std::string> && std::same_as<std::remove_cvref_t<KeyType>, std::string_view>) {
                 hash = HashFunction<std::string_view>{}(key);
             } else {
@@ -274,17 +310,19 @@ namespace gradylib {
             }
             size_t idx = hash % keys.size();
             size_t startIdx = idx;
-            for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
-                if (isSet && keys[idx] == key) {
-                    return values[idx];
-                }
-                if (wasSet && keys[idx] == key) {
+            for (auto [isSet, wasSet] = setFlags[idx]; wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
+                if (keys[idx] == key) {
+                    if (isSet) {
+                        return values[idx];
+                    }
                     std::ostringstream sstr;
                     sstr << "OpenHashMap doesn't contain key";
                     throw gradylibMakeException(sstr.str());
                 }
                 ++idx;
+                // Wrap around
                 idx = idx == keys.size() ? 0 : idx;
+                // Stop if we've covered every element
                 if (startIdx == idx) break;
             }
             std::ostringstream sstr;
@@ -300,7 +338,8 @@ namespace gradylib {
             if (keys.empty()) {
                 return;
             }
-            size_t hash;
+            size_t hash = 0;
+            // Handle the case where string_views are passed to this method for an OpenHashMap<string, *>
             if constexpr (std::same_as<Key, std::string> && std::same_as<std::remove_cvref_t<KeyType>, std::string_view>) {
                 hash = HashFunction<std::string_view>{}(key);
             } else {
@@ -308,16 +347,20 @@ namespace gradylib {
             }
             size_t idx = hash % keys.size();
             size_t startIdx = idx;
-            for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
+            for (auto [isSet, wasSet] = setFlags[idx]; wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
                 if (keys[idx] == key) {
                     if (isSet) {
                         --mapSize;
+                        // Mark the slot as 'unset'
                         setFlags.unsetFirst(idx);
                     }
+                    // We can't find a set slot with this key past this point.
                     return;
                 }
                 ++idx;
+                // Wrap around.
                 idx = idx == keys.size() ? 0 : idx;
+                // Stop if we've covered every element
                 if (startIdx == idx) break;
             }
         }
@@ -543,30 +586,36 @@ namespace gradylib {
         ofs.write(static_cast<char*>(static_cast<void*>(&mapSize)), 8);
         size_t keySize = m.keys.size();
         ofs.write(static_cast<char*>(static_cast<void*>(&keySize)), 8);
+        // We will come back to this position in the file and write the true Value array start position once we know it
         size_t valueOffset = 0;
         auto const valueOffsetWritePos = ofs.tellp();
         ofs.write(static_cast<char*>(static_cast<void*>(&valueOffset)), 8);
+        // We will come back to this position in the file and write the true BitPairSet start position once we know it
         size_t bitPairSetOffset = 0;
         auto const bitPairSetOffsetWritePos = ofs.tellp();
         ofs.write(static_cast<char*>(static_cast<void*>(&bitPairSetOffset)), 8);
+
         size_t keyOffset = 0;
+        // This loop will compute the length of each key structure in bytes and use that to compute the offset in bytes
+        // to each key given some arbitrary base pointer.  The offset is written to the file.
         for (size_t i = 0; i < m.keys.size(); ++i) {
             ofs.write(static_cast<char*>(static_cast<void*>(&keyOffset)), 8);
             int32_t strLen = m.keys[i].length();
-            int32_t strSize = 4 + strLen + (4 - strLen % 4);
+            int32_t strSize = 4 + strLen + gradylib_helpers::getPadLength<4>(strLen);
             keyOffset += strSize;
         }
-        std::vector<char> pad(4, 0);
         for (size_t i = 0; i < m.keys.size(); ++i) {
             int32_t len = m.keys[i].length();
             ofs.write(static_cast<char*>(static_cast<void*>(&len)), 4);
             ofs.write(m.keys[i].data(), len);
-            ofs.write(pad.data(), 4 - len % 4);
+            gradylib_helpers::writePad<4>(ofs);
         }
 
+        gradylib_helpers::writePad<8>(ofs);
         valueOffset = ofs.tellp();
         ofs.write(static_cast<char*>(const_cast<void*>(static_cast<void const *>(m.values.data()))), sizeof(IndexType) * keySize);
 
+        gradylib_helpers::writePad<8>(ofs);
         bitPairSetOffset = ofs.tellp();
         m.setFlags.write(ofs);
 
@@ -614,6 +663,7 @@ namespace gradylib {
         ofs.write(static_cast<char*>(static_cast<void*>(&bitPairSetOffset)), 8);
     }
 
+    // The following is for testing.
     template<typename IndexType, template<typename> typename HashFunc>
     void GRADY_LIB_MOCK_OpenHashMap_SET_SECOND_BITS(OpenHashMap<std::string, IndexType, HashFunc> &m) {
         for (size_t i = 0; i < m.setFlags.size(); ++i) {

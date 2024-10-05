@@ -63,7 +63,7 @@ namespace gradylib {
 
         std::byte const * incKeyPtr(std::byte const * keyPtr) const {
             int32_t len = *static_cast<int32_t const *>(static_cast<void const *>(keyPtr));
-            return keyPtr + 4 + len + (4 - len%4);
+            return keyPtr + 4 + len + gradylib_helpers::getPadLength<4>(len);
         }
 
     public:

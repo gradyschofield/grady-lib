@@ -39,4 +39,21 @@ namespace gradylib {
     };
 }
 
+namespace gradylib_helpers {
+
+    template<int alignment>
+    int getPadLength(int64_t pos) {
+        int padLength = alignment - pos % alignment;
+        return padLength == alignment ? 0 : padLength;
+    }
+
+    template<int alignment>
+    void writePad(std::ofstream & ofs) {
+        static std::vector<char> pad(alignment, 0);
+        int64_t pos = ofs.tellp();
+        int padLength = getPadLength<alignment>(pos);
+        ofs.write(pad.data(), padLength);
+    }
+}
+
 #endif //GRADY_LIB_COMMON_HPP
