@@ -604,6 +604,7 @@ namespace gradylib {
             int32_t strSize = 4 + strLen + gradylib_helpers::getPadLength<4>(strLen);
             keyOffset += strSize;
         }
+        // This loop will write the actual key structures
         for (size_t i = 0; i < m.keys.size(); ++i) {
             int32_t len = m.keys[i].length();
             ofs.write(static_cast<char*>(static_cast<void*>(&len)), 4);
@@ -611,14 +612,17 @@ namespace gradylib {
             gradylib_helpers::writePad<4>(ofs);
         }
 
+        // Write the values
         gradylib_helpers::writePad<8>(ofs);
         valueOffset = ofs.tellp();
         ofs.write(static_cast<char*>(const_cast<void*>(static_cast<void const *>(m.values.data()))), sizeof(IndexType) * keySize);
 
+        // Write the BitPairSet
         gradylib_helpers::writePad<8>(ofs);
         bitPairSetOffset = ofs.tellp();
         m.setFlags.write(ofs);
 
+        // Go back to the Value array and BitPairSet offset locations and write the offsets
         ofs.seekp(valueOffsetWritePos, std::ios::beg);
         ofs.write(static_cast<char*>(static_cast<void*>(&valueOffset)), 8);
         ofs.seekp(bitPairSetOffsetWritePos, std::ios::beg);
@@ -637,28 +641,34 @@ namespace gradylib {
         ofs.write(static_cast<char*>(static_cast<void*>(&mapSize)), 8);
         size_t keySize = m.keys.size();
         ofs.write(static_cast<char*>(static_cast<void*>(&keySize)), 8);
+        // We will come back to this position in the file and write the true BitPairSet start position once we know it
         size_t bitPairSetOffset = 0;
         auto const bitPairSetOffsetWritePos = ofs.tellp();
         ofs.write(static_cast<char*>(static_cast<void*>(&bitPairSetOffset)), 8);
         size_t valueOffset = 0;
+        // This loop will compute the length of each value structure in bytes and use that to compute the offset in bytes
+        // to each value given some arbitrary base pointer.  The offset is written to the file.
         for (size_t i = 0; i < keySize; ++i) {
             ofs.write(static_cast<char*>(static_cast<void*>(&valueOffset)), 8);
             int32_t strLen = m.values[i].length();
-            int32_t strSize = 4 + strLen + (4 - strLen % 4);
+            int32_t strSize = 4 + strLen + gradylib_helpers::getPadLength<4>(strLen);
             valueOffset += strSize;
         }
+        // Write the keys to the file
         ofs.write(static_cast<char*>(const_cast<void*>(static_cast<void const *>(m.keys.data()))), sizeof(IndexType) * keySize);
-        std::vector<char> pad(4, 0);
+        // Write the values to the file
         for (size_t i = 0; i < keySize; ++i) {
             int32_t len = m.values[i].length();
             ofs.write(static_cast<char*>(static_cast<void*>(&len)), 4);
             ofs.write(m.values[i].data(), len);
-            ofs.write(pad.data(), 4 - len % 4);
+            gradylib_helpers::writePad<4>(ofs);
         }
 
+        // Write the BitPairSet to the file
         bitPairSetOffset = ofs.tellp();
         m.setFlags.write(ofs);
 
+        // Go back to the BitPairSet start position offset and write it
         ofs.seekp(bitPairSetOffsetWritePos, std::ios::beg);
         ofs.write(static_cast<char*>(static_cast<void*>(&bitPairSetOffset)), 8);
     }
