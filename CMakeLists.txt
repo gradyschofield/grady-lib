@@ -7,7 +7,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_CXX_FLAGS_PROFILE "-O3 -pg -g")
 set(CMAKE_CXX_FLAGS_COVERAGE "-Og -g -fprofile-arcs -ftest-coverage")
-set(CMAKE_CXX_FLAGS_SANADDR "-O3 -g -fsanitize=address -fno-omit-frame-pointer")
+set(CMAKE_CXX_FLAGS_SANADDR "-O3 -g -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer")
 
 include_directories(
         src/

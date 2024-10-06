@@ -16,9 +16,9 @@ using namespace gradylib;
 namespace fs = std::filesystem;
 
 int64_t myRand() {
-    static int64_t x = 578363509162734;
+    static uint64_t x = 578363509162734;
     x = x * 175055391405843 + 588734109354867;
-    return abs(x);
+    return x;
 }
 
 TEST_CASE("Integer to highly redundant string open hash map") {
