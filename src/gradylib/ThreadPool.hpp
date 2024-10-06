@@ -22,8 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef GRADY_LIB_THREADPOOL_HPP
-#define GRADY_LIB_THREADPOOL_HPP
+#pragma once
 
 #include<concepts>
 #include<condition_variable>
@@ -64,7 +63,8 @@ namespace gradylib {
                             return;
                         }
                         if (!work.empty()) {
-                            auto f = std::move(work.front());
+                            //auto f = std::move(work.front());
+                            auto f{std::move(work.front())};
                             work.pop();
                             freeThreads.fetch_sub(1, std::memory_order_relaxed);
                             lock.unlock();
@@ -108,9 +108,10 @@ namespace gradylib {
             }
         }
     };
+}
 
-    inline std::unique_ptr<ThreadPool> GRADY_LIB_DEFAULT_THREADPOOL;
+namespace gradylib_helpers {
+    inline std::unique_ptr<gradylib::ThreadPool> GRADY_LIB_DEFAULT_THREADPOOL;
     inline std::mutex GRADY_LIB_DEFAULT_THREADPOOL_MUTEX;
 }
 
-#endif //GRADY_LIB_THREADPOOL_HPP

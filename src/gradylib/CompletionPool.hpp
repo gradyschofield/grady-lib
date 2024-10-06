@@ -22,8 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef GRADY_LIB_COMPLETION_POOL_HPP
-#define GRADY_LIB_COMPLETION_POOL_HPP
+#pragma once
 
 #include<atomic>
 #include<utility>
@@ -103,5 +102,3 @@ namespace gradylib {
         }
     };
 }
-
-#endif

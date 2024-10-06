@@ -46,8 +46,7 @@ SOFTWARE.
  * write
  */
 
-#ifndef GRADY_LIB_OPENHASHSETTC_HPP
-#define GRADY_LIB_OPENHASHSETTC_HPP
+#pragma once
 
 #include<fcntl.h>
 #include<sys/mman.h>
@@ -461,4 +460,3 @@ namespace gradylib {
     }
 }
 
-#endif

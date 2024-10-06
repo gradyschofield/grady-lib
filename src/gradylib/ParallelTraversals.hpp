@@ -22,14 +22,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef GRADY_LIB_PARALLELTRAVERSALS_HPP
-#define GRADY_LIB_PARALLELTRAVERSALS_HPP
+#pragma once
 
 #include<concepts>
 #include<future>
 #include<vector>
 
-namespace gradylib {
+namespace gradylib_helpers {
 
     template<typename T>
     struct PartialDefaultConstructor {
@@ -46,5 +45,3 @@ namespace gradylib {
     };
 
 }
-
-#endif //GRADY_LIB_PARALLELTRAVERSALS_HPP

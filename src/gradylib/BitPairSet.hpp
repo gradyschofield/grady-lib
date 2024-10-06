@@ -27,8 +27,7 @@ SOFTWARE.
  * For use in the OpenHashSet/Map.  Copying large vector<bool>'s is mighty slow on my current system.
  */
 
-#ifndef GRADY_LIB_BITPAIRSET_HPP
-#define GRADY_LIB_BITPAIRSET_HPP
+#pragma once
 
 #include<algorithm>
 #include<bit>
@@ -224,4 +223,3 @@ namespace gradylib {
     };
 }
 
-#endif

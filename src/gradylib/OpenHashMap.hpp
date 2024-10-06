@@ -22,8 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef GRADY_LIB_OPENHASHMAP_HPP
-#define GRADY_LIB_OPENHASHMAP_HPP
+#pragma once
 
 #include<fstream>
 #include<future>
@@ -35,6 +34,23 @@ SOFTWARE.
 #include"BitPairSet.hpp"
 #include"ThreadPool.hpp"
 #include"ParallelTraversals.hpp"
+
+/*
+ * To some extent OpenHashMap can be used as a drop in replacement for unordered_map.  It has:
+ *  - at
+ *  - begin
+ *  - clear
+ *  - contains
+ *  - end
+ *  - operator[]
+ *  - reserve
+ *  - size
+ *
+ * API not available in unordered_map:
+ *  - put
+ *  - parallelForEach
+ *  - writeMappable (for integer -> string or string -> integer maps)
+ */
 
 namespace gradylib {
     template<typename Key, typename Value, template<typename> typename HashFunction = std::hash>
@@ -261,7 +277,7 @@ namespace gradylib {
         template<typename KeyType>
         requires (std::is_convertible_v<Key, std::remove_cvref_t<KeyType>> ||
                  std::is_constructible_v<Key, KeyType>) &&
-                 equality_comparable<KeyType, Key>
+                 gradylib_helpers::equality_comparable<KeyType, Key>
         bool contains(KeyType const &key) const {
             if (keys.size() == 0) {
                 return false;
@@ -294,7 +310,7 @@ namespace gradylib {
         template<typename KeyType>
         requires (std::is_constructible_v<Key, KeyType> ||
                  std::is_convertible_v<Key, std::remove_cvref_t<KeyType>>) &&
-                 equality_comparable<KeyType, Key>
+                 gradylib_helpers::equality_comparable<KeyType, Key>
         Value const & at(KeyType const &key) const {
             if (keys.size() == 0) {
                 std::ostringstream sstr;
@@ -332,8 +348,8 @@ namespace gradylib {
 
         template<typename KeyType>
         requires (std::is_constructible_v<Key, KeyType> ||
-                 std::is_convertible_v<Key, std::remove_cvref_t<KeyType>>) &&
-                 equality_comparable<KeyType, Key>
+                  std::is_convertible_v<Key, std::remove_cvref_t<KeyType>>) &&
+                  gradylib_helpers::equality_comparable<KeyType, Key>
         void erase(KeyType const &key) {
             if (keys.empty()) {
                 return;
@@ -489,33 +505,35 @@ namespace gradylib {
         }
 
 
-        template<Mergeable ReturnValue = OpenHashMap<Key, Value, HashFunction>,
+        template<gradylib_helpers::Mergeable ReturnValue = OpenHashMap<Key, Value, HashFunction>,
                 typename Callable,
-                typename PartialInitializer = PartialDefaultConstructor<ReturnValue>,
-                typename FinalInitializer = FinalDefaultConstructor<ReturnValue>>
+                typename PartialInitializer = gradylib_helpers::PartialDefaultConstructor<ReturnValue>,
+                typename FinalInitializer = gradylib_helpers::FinalDefaultConstructor<ReturnValue>>
         requires std::is_invocable_r_v<void, Callable, ReturnValue &, Key const &, Value const &> &&
                  std::is_copy_constructible_v<Callable> &&
                  std::is_invocable_r_v<ReturnValue, PartialInitializer, int, int> &&
                  std::is_invocable_r_v<ReturnValue, FinalInitializer, int>
         std::future<ReturnValue> parallelForEach(Callable && f,
                                                  PartialInitializer && partialInitializer = PartialInitializer{},
-                                                 FinalInitializer && finalInitializer = FinalInitializer{}) const {
-            if (!GRADY_LIB_DEFAULT_THREADPOOL) {
-                std::lock_guard lg(GRADY_LIB_DEFAULT_THREADPOOL_MUTEX);
-                if (!GRADY_LIB_DEFAULT_THREADPOOL) {
-                    GRADY_LIB_DEFAULT_THREADPOOL = std::make_unique<ThreadPool>();
+                                                 FinalInitializer && finalInitializer = FinalInitializer{},
+                                                 size_t numThreads = 0) const {
+            if (!gradylib_helpers::GRADY_LIB_DEFAULT_THREADPOOL) {
+                std::lock_guard lg(gradylib_helpers::GRADY_LIB_DEFAULT_THREADPOOL_MUTEX);
+                if (!gradylib_helpers::GRADY_LIB_DEFAULT_THREADPOOL) {
+                    gradylib_helpers::GRADY_LIB_DEFAULT_THREADPOOL = std::make_unique<ThreadPool>();
                 }
             }
-            return parallelForEach(*GRADY_LIB_DEFAULT_THREADPOOL,
+            return parallelForEach(*gradylib_helpers::GRADY_LIB_DEFAULT_THREADPOOL,
                                    std::forward<Callable>(f),
                                    std::forward<PartialInitializer>(partialInitializer),
-                                   std::forward<FinalInitializer>(finalInitializer));
+                                   std::forward<FinalInitializer>(finalInitializer),
+                                   numThreads);
         }
 
-        template<Mergeable ReturnValue = OpenHashMap<Key, Value, HashFunction>,
+        template<gradylib_helpers::Mergeable ReturnValue = OpenHashMap<Key, Value, HashFunction>,
                 typename Callable,
-                typename PartialInitializer = PartialDefaultConstructor<ReturnValue>,
-                typename FinalInitializer = FinalDefaultConstructor<ReturnValue>>
+                typename PartialInitializer = gradylib_helpers::PartialDefaultConstructor<ReturnValue>,
+                typename FinalInitializer = gradylib_helpers::FinalDefaultConstructor<ReturnValue>>
         requires std::is_invocable_r_v<void, Callable, ReturnValue &, Key const &, Value const &> &&
                  std::is_copy_constructible_v<Callable> &&
                  std::is_invocable_r_v<ReturnValue, PartialInitializer, int, int> &&
@@ -523,7 +541,7 @@ namespace gradylib {
         std::future<ReturnValue> parallelForEach(ThreadPool & tp,
                                                  Callable && f,
                                                  PartialInitializer && partialInitializer = PartialInitializer{},
-                                                 FinalInitializer && finalInitializer = PartialInitializer{},
+                                                 FinalInitializer && finalInitializer = FinalInitializer{},
                                                  size_t numThreads = 0) const {
             if (numThreads == 0) {
                 numThreads = tp.size();
@@ -544,8 +562,7 @@ namespace gradylib {
             size_t start = 0;
             for (size_t threadIdx = 0; threadIdx < numThreads; ++threadIdx) {
                 size_t stop = start + keys.size() / numThreads + (threadIdx < keys.size() % numThreads ? 1 : 0);
-                tp.add([threadIdx, numThreads, start, stop, f, result, this, &partialInitializer]() {
-                    ReturnValue partial = partialInitializer(threadIdx, numThreads);
+                tp.add([start, stop, f, result, this, partial=partialInitializer(threadIdx, numThreads)]() mutable {
                     for (size_t j = start; j < stop; ++j) {
                         if (setFlags.isFirstSet(j)) {
                             f(partial, keys[j], values[j]);
@@ -665,6 +682,7 @@ namespace gradylib {
         }
 
         // Write the BitPairSet to the file
+        gradylib_helpers::writePad<8>(ofs);
         bitPairSetOffset = ofs.tellp();
         m.setFlags.write(ofs);
 
@@ -681,5 +699,3 @@ namespace gradylib {
         }
     }
 }
-
-#endif //GRADY_LIB_OPENHASHMAP_HPP

@@ -22,8 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef GRADY_LIB_OPENHASHSET_HPP
-#define GRADY_LIB_OPENHASHSET_HPP
+#pragma once
 
 #include<fstream>
 #include<future>
@@ -165,7 +164,7 @@ namespace gradylib {
         template<typename KeyType>
         requires (std::is_convertible_v<Key, std::remove_cvref_t<KeyType>> ||
                   std::is_constructible_v<Key, KeyType>) &&
-                  equality_comparable<KeyType, Key>
+                  gradylib_helpers::equality_comparable<KeyType, Key>
         bool contains(KeyType const &key) const {
             if (keys.size() == 0) {
                 return false;
@@ -195,7 +194,7 @@ namespace gradylib {
         template<typename KeyType>
         requires (std::is_constructible_v<Key, KeyType> ||
                   std::is_convertible_v<Key, std::remove_cvref_t<KeyType>>) &&
-        equality_comparable<KeyType, Key>
+                  gradylib_helpers::equality_comparable<KeyType, Key>
         void erase(KeyType const &key) {
             if (keys.empty()) {
                 return;
@@ -338,10 +337,10 @@ namespace gradylib {
         }
 
 
-        template<Mergeable ReturnValue = OpenHashSet<Key, HashFunction>,
+        template<gradylib_helpers::Mergeable ReturnValue = OpenHashSet<Key, HashFunction>,
                 typename Callable,
-                typename PartialInitializer = PartialDefaultConstructor<ReturnValue>,
-                typename FinalInitializer = FinalDefaultConstructor<ReturnValue>>
+                typename PartialInitializer = gradylib_helpers::PartialDefaultConstructor<ReturnValue>,
+                typename FinalInitializer = gradylib_helpers::FinalDefaultConstructor<ReturnValue>>
         requires std::is_invocable_r_v<void, Callable, ReturnValue &, Key const &> &&
                  std::is_copy_constructible_v<Callable> &&
                  std::is_invocable_r_v<ReturnValue, PartialInitializer, int, int> &&
@@ -349,22 +348,22 @@ namespace gradylib {
         std::future<ReturnValue> parallelForEach(Callable && f,
                                                  PartialInitializer && partialInitializer = PartialInitializer{},
                                                  FinalInitializer && finalInitializer = FinalInitializer{}) const {
-            if (!GRADY_LIB_DEFAULT_THREADPOOL) {
-                std::lock_guard lg(GRADY_LIB_DEFAULT_THREADPOOL_MUTEX);
-                if (!GRADY_LIB_DEFAULT_THREADPOOL) {
-                    GRADY_LIB_DEFAULT_THREADPOOL = std::make_unique<ThreadPool>();
+            if (!gradylib_helpers::GRADY_LIB_DEFAULT_THREADPOOL) {
+                std::lock_guard lg(gradylib_helpers::GRADY_LIB_DEFAULT_THREADPOOL_MUTEX);
+                if (!gradylib_helpers::GRADY_LIB_DEFAULT_THREADPOOL) {
+                    gradylib_helpers::GRADY_LIB_DEFAULT_THREADPOOL = std::make_unique<ThreadPool>();
                 }
             }
-            return parallelForEach(*GRADY_LIB_DEFAULT_THREADPOOL,
+            return parallelForEach(*gradylib_helpers::GRADY_LIB_DEFAULT_THREADPOOL,
                                    std::forward<Callable>(f),
                                    std::forward<PartialInitializer>(partialInitializer),
                                    std::forward<FinalInitializer>(finalInitializer));
         }
 
-        template<Mergeable ReturnValue = OpenHashSet<Key, HashFunction>,
+        template<gradylib_helpers::Mergeable ReturnValue = OpenHashSet<Key, HashFunction>,
                 typename Callable,
-                typename PartialInitializer = PartialDefaultConstructor<ReturnValue>,
-                typename FinalInitializer = FinalDefaultConstructor<ReturnValue>>
+                typename PartialInitializer = gradylib_helpers::PartialDefaultConstructor<ReturnValue>,
+                typename FinalInitializer = gradylib_helpers::FinalDefaultConstructor<ReturnValue>>
         requires std::is_invocable_r_v<void, Callable, ReturnValue &, Key const &> &&
                  std::is_copy_constructible_v<Callable> &&
                  std::is_invocable_r_v<ReturnValue, PartialInitializer, int, int> &&
@@ -484,4 +483,3 @@ namespace gradylib {
 
 }
 
-#endif //GRADY_LIB_OPENHASHSET_HPP

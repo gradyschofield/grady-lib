@@ -22,8 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef GRADY_LIB_OPENHASHMAPTC_HPP
-#define GRADY_LIB_OPENHASHMAPTC_HPP
+#pragma once
 
 #include<fcntl.h>
 #include<sys/mman.h>
@@ -632,5 +631,3 @@ namespace gradylib {
         OpenHashMapTC<Key, Value, HashFunction>::mmapFunc = mmap;
     }
 }
-
-#endif

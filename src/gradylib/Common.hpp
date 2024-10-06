@@ -22,12 +22,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef GRADY_LIB_COMMON_HPP
-#define GRADY_LIB_COMMON_HPP
+#pragma once
 
 #include<concepts>
 
-namespace gradylib {
+namespace gradylib_helpers {
     template<typename T>
     concept Mergeable = requires(T a, T b) {
         { mergePartials(a, b) } -> std::same_as<void>;
@@ -56,4 +55,3 @@ namespace gradylib_helpers {
     }
 }
 
-#endif //GRADY_LIB_COMMON_HPP

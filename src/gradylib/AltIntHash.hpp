@@ -22,8 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef GRADY_LIB_ALTINTHASH_HPP
-#define GRADY_LIB_ALTINTHASH_HPP
+#pragma once
 
 #include<bit>
 #include<cstddef>
@@ -39,4 +38,3 @@ namespace gradylib {
     };
 }
 
-#endif //GRADY_LIB_ALTINTHASH_HPP

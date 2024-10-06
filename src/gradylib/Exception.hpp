@@ -2,8 +2,7 @@
 // Created by Grady Schofield on 8/25/24.
 //
 
-#ifndef GRADY_LIB_EXCEPTION_HPP
-#define GRADY_LIB_EXCEPTION_HPP
+#pragma once
 
 #include<cxxabi.h>
 
@@ -15,7 +14,6 @@
 #ifdef __APPLE__
 
 #include<execinfo.h>
-#include<regex>
 
 namespace gradylib {
     class Exception : public std::exception {
@@ -36,26 +34,32 @@ namespace gradylib {
             char **syms = backtrace_symbols(callstack, frames);
             for (int i = 0; i < frames; ++i) {
                 int status = 0;
-                std::regex pattern(R"((\S+)\s+(\S+)\s+(\S+)\s+(\S+))");
-                std::smatch match;
-                std::string mangledName;
                 std::string frameLine(syms[i]);
                 char *demangledName{};
-                bool couldNotParse = true;
-                if (std::regex_search(frameLine, match, pattern)) {
-                    if (match.size() > 4) {
-                        mangledName = match[4];
-                        demangledName = abi::__cxa_demangle(mangledName.c_str(), nullptr, nullptr, &status);
-                        if (status == 0) {
-                            ostr << "\t" << i << " " << demangledName << "\n";
-                        } else {
-                            ostr << "\t" << i << " " << mangledName << "\n";
-                        }
-                        free(demangledName);
-                        couldNotParse = false;
+                auto getMangledName = [](std::string const & s) {
+                    int nBlanks = 0;
+                    int len = s.length();
+                    int i = 0;
+                    while (true) {
+                        while (i < len && !isspace(s[i])) ++i;
+                        while (i < len && isspace(s[i])) ++i;
+                        ++nBlanks;
+                        if (nBlanks == 3) break;
                     }
-                }
-                if (couldNotParse) {
+                    int j = i;
+                    while (j < len && !isspace(s[j])) ++j;
+                    return s.substr(i, j-i);
+                };
+                std::string mangledName = getMangledName(frameLine);
+                if (!mangledName.empty()) {
+                    demangledName = abi::__cxa_demangle(mangledName.c_str(), nullptr, nullptr, &status);
+                    if (status == 0) {
+                        ostr << "\t" << i << " " << demangledName << "\n";
+                    } else {
+                        ostr << "\t" << i << " " << mangledName << "\n";
+                    }
+                    free(demangledName);
+                } else {
                     ostr << "\t" << i << " " << syms[i] << "\n";
                 }
             }
@@ -105,4 +109,3 @@ namespace gradylib {
 
 #endif
 
-#endif //GRADY_LIB_EXCEPTION_HPP

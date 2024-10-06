@@ -22,8 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef GRADY_LIB_MMAPI2HRSOPENHASHMAP_HPP
-#define GRADY_LIB_MMAPI2HRSOPENHASHMAP_HPP
+#pragma once
 
 #include<fcntl.h>
 #include<errno.h>
@@ -259,5 +258,3 @@ namespace gradylib {
         MMapI2HRSOpenHashMap<IndexType, IntermediateIndexType, HashFunction>::mmapFunc = mmap;
     }
 }
-
-#endif

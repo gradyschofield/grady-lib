@@ -7,6 +7,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_CXX_FLAGS_PROFILE "-O3 -pg -g")
 set(CMAKE_CXX_FLAGS_COVERAGE "-Og -g -fprofile-arcs -ftest-coverage")
+set(CMAKE_CXX_FLAGS_SANADDR "-O3 -g -fsanitize=address -fno-omit-frame-pointer")
 
 include_directories(
         src/
@@ -55,3 +56,5 @@ set(TEST_SRC
 
 add_executable(allTests ${SRC} ${TEST_SRC})
 target_link_libraries(allTests PRIVATE Catch2 Catch2Main)
+
+add_executable(replaceRegex src/experiment/ReplaceRegex.cpp)
