@@ -48,6 +48,7 @@ SOFTWARE.
  *
  * API not available in unordered_map:
  *  - put
+ *  - get
  *  - parallelForEach
  *  - writeMappable (for integer -> string or string -> integer maps)
  */
@@ -350,6 +351,48 @@ namespace gradylib {
         requires (std::is_constructible_v<Key, KeyType> ||
                   std::is_convertible_v<Key, std::remove_cvref_t<KeyType>>) &&
                   gradylib_helpers::equality_comparable<KeyType, Key>
+        gradylib_helpers::MapLookup<Value> get(KeyType const &key) {
+            if (keys.size() == 0) {
+                return gradylib_helpers::MapLookup<Value>();
+            }
+            size_t hash = 0;
+            // Handle the case where string_views are passed to this method for an OpenHashMap<string, *>
+            if constexpr (std::same_as<Key, std::string> && std::same_as<std::remove_cvref_t<KeyType>, std::string_view>) {
+                hash = HashFunction<std::string_view>{}(key);
+            } else {
+                hash = hashFunction(key);
+            }
+            size_t idx = hash % keys.size();
+            size_t startIdx = idx;
+            for (auto [isSet, wasSet] = setFlags[idx]; wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
+                if (keys[idx] == key) {
+                    if (isSet) {
+                        return gradylib_helpers::MapLookup<Value>(&values[idx]);
+                    }
+                    return gradylib_helpers::MapLookup<Value>();
+                }
+                ++idx;
+                // Wrap around
+                idx = idx == keys.size() ? 0 : idx;
+                // Stop if we've covered every element
+                if (startIdx == idx) break;
+            }
+            return gradylib_helpers::MapLookup<Value>();
+        }
+
+        template<typename KeyType>
+        requires (std::is_constructible_v<Key, KeyType> ||
+                  std::is_convertible_v<Key, std::remove_cvref_t<KeyType>>) &&
+                  gradylib_helpers::equality_comparable<KeyType, Key>
+        gradylib_helpers::MapLookup<Value const> get(KeyType const &key) const {
+            OpenHashMap<Key, Value, HashFunction> * p = const_cast<OpenHashMap<Key, Value, HashFunction> *>(this);
+            return p->get(key).makeConst();
+        }
+
+        template<typename KeyType>
+        requires (std::is_constructible_v<Key, KeyType> ||
+                  std::is_convertible_v<Key, std::remove_cvref_t<KeyType>>) &&
+                  gradylib_helpers::equality_comparable<KeyType, Key>
         void erase(KeyType const &key) {
             if (keys.empty()) {
                 return;
@@ -505,6 +548,7 @@ namespace gradylib {
         }
 
 
+        // This overload of parallelForEach uses the default thread pool.
         template<gradylib_helpers::Mergeable ReturnValue = OpenHashMap<Key, Value, HashFunction>,
                 typename Callable,
                 typename PartialInitializer = gradylib_helpers::PartialDefaultConstructor<ReturnValue>,
@@ -517,6 +561,7 @@ namespace gradylib {
                                                  PartialInitializer && partialInitializer = PartialInitializer{},
                                                  FinalInitializer && finalInitializer = FinalInitializer{},
                                                  size_t numThreads = 0) const {
+            // If the default thread pool hasn't been created yet then create it now.
             if (!gradylib_helpers::GRADY_LIB_DEFAULT_THREADPOOL) {
                 std::lock_guard lg(gradylib_helpers::GRADY_LIB_DEFAULT_THREADPOOL_MUTEX);
                 if (!gradylib_helpers::GRADY_LIB_DEFAULT_THREADPOOL) {
@@ -530,6 +575,7 @@ namespace gradylib {
                                    numThreads);
         }
 
+        // This overload of parallelForEachTakes a thread pool argument
         template<gradylib_helpers::Mergeable ReturnValue = OpenHashMap<Key, Value, HashFunction>,
                 typename Callable,
                 typename PartialInitializer = gradylib_helpers::PartialDefaultConstructor<ReturnValue>,

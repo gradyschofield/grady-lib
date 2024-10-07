@@ -53,5 +53,34 @@ namespace gradylib_helpers {
         int padLength = getPadLength<alignment>(pos);
         ofs.write(pad.data(), padLength);
     }
+
+    template<typename T>
+    class MapLookup {
+        T * val = nullptr;
+
+    public:
+        MapLookup() = default;
+
+        MapLookup(T * val)
+            : val(val)
+        {
+        }
+
+        MapLookup<std::remove_const_t<T> const> makeConst() {
+            return MapLookup<std::remove_const_t<T> const>(val);
+        }
+
+        T & value() {
+            return *val;
+        }
+
+        T & value() const {
+            return *val;
+        }
+
+        bool has_value() const {
+            return val != nullptr;
+        }
+    };
 }
 

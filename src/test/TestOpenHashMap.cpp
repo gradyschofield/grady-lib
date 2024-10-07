@@ -248,6 +248,39 @@ TEST_CASE("OpenHashMap at throws on nonexistent key") {
     REQUIRE_THROWS(m.at("def") == 1);
 }
 
+TEST_CASE("OpenHashMap get returns empty optional") {
+    gradylib::OpenHashMap<string, int> m;
+    auto l = m.get("abc");
+    REQUIRE(!l.has_value());
+}
+
+TEST_CASE("OpenHashMap get") {
+    gradylib::OpenHashMap<string, int, TrashHash> m;
+    m.put("abc", 0);
+    m.put("def", 1);
+    m.put("ghi", 2);
+    REQUIRE(m.size() == 3);
+    REQUIRE(m.get("abc").value() == 0);
+    REQUIRE(m.get("def").value() == 1);
+    REQUIRE(m.get("ghi").value() == 2);
+    m.erase("ghi");
+    REQUIRE(!m.get("ghi").has_value());
+    REQUIRE(!m.get("jkl").has_value());
+}
+
+TEST_CASE("OpenHashMap const get") {
+    gradylib::OpenHashMap<string, int, TrashHash> m;
+    m.put("abc", 0);
+    m.put("def", 1);
+    m.put("ghi", 2);
+    gradylib::OpenHashMap<string, int, TrashHash> const * p = &m;
+    REQUIRE(p->size() == 3);
+    REQUIRE(p->get("abc").value() == 0);
+    REQUIRE(p->get("def").value() == 1);
+    REQUIRE(p->get("ghi").value() == 2);
+    REQUIRE(!p->get("jkl").has_value());
+}
+
 TEST_CASE("OpenHashMap erase empty map") {
     gradylib::OpenHashMap<string, int> m;
     m.erase("abc");
