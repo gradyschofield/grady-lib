@@ -35,6 +35,7 @@ SOFTWARE.
 #include<vector>
 
 #include"BitPairSet.hpp"
+#include"Common.hpp"
 
 namespace gradylib {
 
@@ -382,6 +383,32 @@ namespace gradylib {
             std::ostringstream sstr;
             sstr << "key not found in map";
             throw gradylibMakeException(sstr.str());
+        }
+
+        gradylib_helpers::MapLookup<Value> get(Key const &key) {
+            if (keySize == 0) {
+                return gradylib_helpers::MapLookup<Value>();
+            }
+            size_t hash = hashFunction(key);
+            size_t idx = hash % keySize;
+            size_t startIdx = idx;
+            for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
+                if (isSet && keys[idx] == key) {
+                    return gradylib_helpers::MapLookup<Value>(&values[idx]);
+                }
+                if (wasSet && keys[idx] == key) {
+                    return gradylib_helpers::MapLookup<Value>();
+                }
+                ++idx;
+                idx = idx == keySize ? 0 : idx;
+                if (startIdx == idx) break;
+            }
+            return gradylib_helpers::MapLookup<Value>();
+        }
+
+        gradylib_helpers::MapLookup<Value const> get(Key const &key) const {
+            OpenHashMapTC<Key, Value, HashFunction> * p = const_cast<OpenHashMapTC<Key, Value, HashFunction> *>(this);
+            return p->get(key).makeConst();
         }
 
         bool contains(Key const &key) const {

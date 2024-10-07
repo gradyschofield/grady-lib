@@ -291,6 +291,39 @@ TEST_CASE("OpenHashMapTC at throws on nonexistent element") {
     REQUIRE_THROWS(m.at(1) == 1.0);
 }
 
+TEST_CASE("OpenHashMapTC get returns empty optional") {
+    gradylib::OpenHashMapTC<int, int> m;
+    auto l = m.get(1);
+    REQUIRE(!l.has_value());
+}
+
+TEST_CASE("OpenHashMapTC get") {
+    gradylib::OpenHashMapTC<int, int, TrashHash> m;
+    m.put(0, 0);
+    m.put(1, 1);
+    m.put(2, 2);
+    REQUIRE(m.size() == 3);
+    REQUIRE(m.get(0).value() == 0);
+    REQUIRE(m.get(1).value() == 1);
+    REQUIRE(m.get(2).value() == 2);
+    m.erase(2);
+    REQUIRE(!m.get(2).has_value());
+    REQUIRE(!m.get(3).has_value());
+}
+
+TEST_CASE("OpenHashMapTC const get") {
+    gradylib::OpenHashMapTC<int, int, TrashHash> m;
+    m.put(0, 0);
+    m.put(1, 1);
+    m.put(2, 2);
+    gradylib::OpenHashMapTC<int, int, TrashHash> const * p = &m;
+    REQUIRE(p->size() == 3);
+    REQUIRE(p->get(0).value() == 0);
+    REQUIRE(p->get(1).value() == 1);
+    REQUIRE(p->get(2).value() == 2);
+    REQUIRE(!p->get(3).has_value());
+}
+
 TEST_CASE("OpenHashMapTC contains on empty map") {
     gradylib::OpenHashMapTC<int, double> m;
     REQUIRE(!m.contains(1) );

@@ -347,6 +347,7 @@ namespace gradylib {
             throw gradylibMakeException(sstr.str());
         }
 
+        // This method returns something like an optional<Value>.
         template<typename KeyType>
         requires (std::is_constructible_v<Key, KeyType> ||
                   std::is_convertible_v<Key, std::remove_cvref_t<KeyType>>) &&
