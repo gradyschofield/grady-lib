@@ -608,6 +608,7 @@ namespace gradylib {
             std::shared_ptr<Result> result = std::make_shared<Result>(finalInitializer(numThreads), numThreads);
             size_t start = 0;
             for (size_t threadIdx = 0; threadIdx < numThreads; ++threadIdx) {
+                // The parallelization scheme is to simply partition the arrays backing the map into equal sizes
                 size_t stop = start + keys.size() / numThreads + (threadIdx < keys.size() % numThreads ? 1 : 0);
                 tp.add([start, stop, f, result, this, partial=partialInitializer(threadIdx, numThreads)]() mutable {
                     for (size_t j = start; j < stop; ++j) {
@@ -617,6 +618,7 @@ namespace gradylib {
                     }
                     std::lock_guard lg(result->finalMutex);
                     mergePartials(result->final, partial);
+                    // The lock_guard is protecting remainingThreads
                     if (result->remainingThreads == 1) {
                         result->promise.set_value(std::move(result->final));
                     }

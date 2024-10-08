@@ -357,6 +357,15 @@ TEST_CASE("MMapI2SOpenHashMap operator[]") {
     filesystem::remove(tmpFile);
 }
 
+TEST_CASE("MMapI2SOpenHashMap operator[] on removed element is default constructed") {
+    gradylib::OpenHashMap<int, int> m;
+    m.reserve(10);
+    m.put(0, 1);
+    m.erase(0);
+    int x = m[0];
+    REQUIRE(x == 0);
+}
+
 TEST_CASE("MMapI2SOpenHashMap contains") {
     fs::path tmpPath = filesystem::temp_directory_path();
     fs::path tmpFile = tmpPath / "map.bin";
