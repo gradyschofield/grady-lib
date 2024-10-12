@@ -548,6 +548,84 @@ namespace gradylib {
             return mapSize;
         }
 
+        //template<typename = std::enable_if_t</* key has a serialize method or key has a serialize global and value has a serialize method or global */>
+        void write(std::filesystem::path path, std::function<void(std::ofstream &, Key const &)> serializeKey, std::function<void(std::ofstream &, Value const &)> serializeValue) {
+            std::ofstream ofs(path, std::ios::binary);
+            write(ofs, serializeKey, serializeValue);
+        }
+
+        void write(std::ofstream & ofs, std::function<void(std::ofstream &, Key const &)> serializeKey, std::function<void(std::ofstream &, Value const &)> serializeValue) {
+            namespace gh = gradylib_helpers;
+            ofs.write(gh::charCast(&mapSize), sizeof(size_t));
+            size_t keySize = keys.size();
+            ofs.write(gh::charCast(&keySize), sizeof(size_t));
+            ofs.write(gh::charCast(&loadFactor), 8);
+            ofs.write(gh::charCast(&growthFactor), 8);
+            for (size_t i = 0; i < keys.size(); ++i) {
+                if (setFlags.isFirstSet(i)) {
+                    // Write the key/value array index of this element
+                    ofs.write(gh::charCast(&i), sizeof(size_t));
+
+                    // We'll come back to this point to write a couple of offsets
+                    uint64_t offsetOffset = ofs.tellp();
+                    uint64_t dummy = 0;
+                    ofs.write(gh::charCast(&dummy), 8);
+                    ofs.write(gh::charCast(&dummy), 8);
+
+                    serializeKey(ofs, keys[i]);
+
+                    // We can't know if serializeKey left the file position at the end so put it there
+                    ofs.seekp(0, std::ios::end);
+                    uint64_t valueOffset = ofs.tellp();
+                    serializeValue(ofs, values[i]);
+
+                    // We can't know if serializeValue left the file position at the end so put it there
+                    ofs.seekp(0, std::ios::end);
+                    uint64_t nextOffset = ofs.tellp();
+
+                    // Write our two offsets to the location marked above
+                    ofs.seekp(offsetOffset);
+                    ofs.write(gh::charCast(&valueOffset), 8);
+                    ofs.write(gh::charCast(&nextOffset), 8);
+                    ofs.seekp(0, std::ios::end);
+                }
+            }
+
+            setFlags.write(ofs);
+        }
+
+        static OpenHashMap<Key, Value, HashFunction> read(std::ifstream & ifs, std::function<Key(std::ifstream &)> deserializeKey, std::function<Value(std::ifstream &)> deserializeValue) {
+            namespace gh = gradylib_helpers;
+            OpenHashMap<Key, Value, HashFunction> ret;
+            ifs.read(gh::charCast(&ret.mapSize), sizeof(size_t));
+            size_t keySize;
+            ifs.read(gh::charCast(&keySize), sizeof(size_t));
+            ifs.read(gh::charCast(&ret.loadFactor), 8);
+            ifs.read(gh::charCast(&ret.growthFactor), 8);
+            ret.keys = std::vector<Key>(keySize);
+            ret.values = std::vector<Value>(keySize);
+            for (size_t i = 0; i < ret.mapSize; ++i) {
+                size_t idx;
+                ifs.read(gh::charCast(&idx), sizeof(size_t));
+                uint64_t valueOffset, nextOffset;
+                ifs.read(gh::charCast(&valueOffset), 8);
+                ifs.read(gh::charCast(&nextOffset), 8);
+                ret.keys[idx] = deserializeKey(ifs);
+                // We can't be sure deserializeKey left the file position at the end the key's bytes hence the following
+                ifs.seekg(valueOffset);
+                ret.values[idx] = deserializeValue(ifs);
+                // We can't be sure deserializeValue left the file position at the end the value's bytes hence the following
+                ifs.seekg(nextOffset);
+            }
+            ret.setFlags = BitPairSet(ifs);
+            return ret;
+        }
+
+        static OpenHashMap<Key, Value, HashFunction> read(std::filesystem::path path, std::function<Key(std::ifstream &)> deserializeKey, std::function<Value(std::ifstream &)> deserializeValue) {
+            std::ifstream ifs(path, std::ios::binary);
+            return OpenHashMap<Key, Value, HashFunction>::read(ifs, deserializeKey, deserializeValue);
+        }
+
 
         // This overload of parallelForEach uses the default thread pool.
         template<gradylib_helpers::Mergeable ReturnValue = OpenHashMap<Key, Value, HashFunction>,

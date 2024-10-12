@@ -7,6 +7,7 @@
 #include<iostream>
 
 #include<gradylib/OpenHashSet.hpp>
+#include"TestCommon.hpp"
 
 using namespace std;
 using namespace gradylib;
@@ -198,5 +199,21 @@ TEST_CASE("OpenHashSet writeMappable"){
     m.insert(5);
     //gradylib::writeMappable(tmpFile, m);
     //OpenHashSet<int> m2(tmpFile);
+    filesystem::remove(tmpFile);
+}
+
+TEST_CASE("OpenHashSet write") {
+    gradylib::OpenHashSet<StringIntFloat> s;
+    s.insert(StringIntFloat{"ruf3", 3, 0.2345});
+    s.insert(StringIntFloat{"**4nm_", -5, 0.2345});
+    s.insert(StringIntFloat{"@@dn_", numeric_limits<int>::max()-1, -numeric_limits<float>::max()});
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "set.bin";
+    s.write(tmpFile, serializeStringIntFloat);
+    auto s2 = gradylib::OpenHashSet<StringIntFloat>::read(tmpFile, deserializeStringIntFloat);
+    REQUIRE(s.size() == s2.size());
+    for (auto && k : s) {
+        REQUIRE(s2.contains(k));
+    }
     filesystem::remove(tmpFile);
 }

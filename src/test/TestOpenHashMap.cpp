@@ -15,6 +15,8 @@
 #include"gradylib/MMapS2IOpenHashMap.hpp"
 #include"gradylib/MMapI2SOpenHashMap.hpp"
 
+#include"TestCommon.hpp"
+
 using namespace std;
 namespace fs = std::filesystem;
 
@@ -845,3 +847,19 @@ TEST_CASE("MMapS2IOpenHashMap clone") {
     filesystem::remove(tmpFile);
 }
 
+TEST_CASE("OpenHashMap write") {
+    gradylib::OpenHashMap<string, StringIntFloat> m;
+    m["abc"] = StringIntFloat{"ruf3", 3, 0.2345};
+    m["rj8##"] = StringIntFloat{"**4nm_", -5, 0.2345};
+    m["i_2vf%"] = StringIntFloat{"@@dn_", numeric_limits<int>::max()-1, -numeric_limits<float>::max()};
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "map.bin";
+    m.write(tmpFile, serializeString, serializeStringIntFloat);
+    auto m2 = gradylib::OpenHashMap<string, StringIntFloat>::read(tmpFile, deserializeString, deserializeStringIntFloat);
+    REQUIRE(m.size() == m2.size());
+    for (auto && [k, v] : m) {
+        REQUIRE(m2.contains(k));
+        REQUIRE(v == m2[k]);
+    }
+    filesystem::remove(tmpFile);
+}

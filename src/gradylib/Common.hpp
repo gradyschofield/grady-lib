@@ -82,5 +82,15 @@ namespace gradylib_helpers {
             return val != nullptr;
         }
     };
+
+    template<typename T>
+    inline char * charCast(T * p) {
+        return static_cast<char *>(static_cast<void*>(p));
+    }
+
+    template<typename T>
+    inline char * charCast(T const * p) {
+        return static_cast<char *>(const_cast<void *>(static_cast<void const *>(p)));
+    }
 }
 
