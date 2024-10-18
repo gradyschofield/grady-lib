@@ -56,10 +56,11 @@ namespace gradylib {
         }
 
         template<typename U>
-        requires std::same_as<std::remove_cvref_t<U>, T>
+        requires std::same_as<std::remove_cvref_t<U>, T> // template being used to get perfect forwarding
         void add(U &&t) {
-            Node *n = new Node(std::forward<U>(t));
+            Node *n = new Node(std::forward<U>(t)); // This will be deleted in CompletionPool::iterator::operator++
             Node *expected = n->next = head.load(std::memory_order_relaxed);
+            // head is 'acquired' in CompeltionPool::begin
             while (!head.compare_exchange_strong(expected, n, std::memory_order_release, std::memory_order_relaxed)) {
                 n->next = expected;
             }
@@ -101,6 +102,7 @@ namespace gradylib {
 
         iterator begin() {
             Node * n = head.load(std::memory_order_relaxed);
+            // head is 'released' in CompeltionPool::add
             while (!head.compare_exchange_strong(n, nullptr, std::memory_order_acquire, std::memory_order_relaxed)) {
                 continue;
             }
