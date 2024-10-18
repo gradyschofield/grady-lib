@@ -65,6 +65,10 @@ namespace gradylib {
             }
         }
 
+        /*
+         * CompletionPool::begin will steal the work list from the pool,
+         * and operator++ on the iterator will delete the list node.
+         */
         class iterator {
             Node *n;
         public:
@@ -88,13 +92,19 @@ namespace gradylib {
                 if (!n) {
                     return *this;
                 }
+                auto old = n;
                 n = n->next;
+                delete old;
                 return *this;
             }
         };
 
         iterator begin() {
-            return iterator(head.load(std::memory_order_acquire));
+            Node * n = head.load(std::memory_order_relaxed);
+            while (!head.compare_exchange_strong(n, nullptr, std::memory_order_acquire, std::memory_order_relaxed)) {
+                continue;
+            }
+            return iterator(n);
         }
 
         iterator end() {

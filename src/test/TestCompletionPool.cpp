@@ -38,3 +38,39 @@ TEST_CASE("Completion Pool"){
     }
     REQUIRE(tp.size() * 10000 == total);
 }
+
+TEST_CASE("Completion Pool Heavy"){
+    int64_t numCompletions = 10000000;
+    CompletionPool<int64_t> completionPool;
+    auto writer = [numCompletions, &completionPool]() {
+        for (int64_t i = 0; i < numCompletions; ++i) {
+            completionPool.add(i);
+        }
+    };
+    atomic<bool> stop{false};
+    int64_t numFinished = 0;
+    auto reader = [numCompletions, &numFinished, &stop, &completionPool]() {
+        bool lastPass = false;
+        int64_t numLoops = 0;
+        while (!lastPass) {
+            if (stop.load(std::memory_order_relaxed)) {
+                lastPass = true;
+            }
+            bool entered = false;
+            for (auto i: completionPool) {
+                entered = true;
+                ++numFinished;
+            }
+            if (entered) {
+                ++numLoops;
+            }
+        }
+        cout << "Average CompletionPool partial result size " << numFinished / (double)numLoops << endl;
+    };
+    thread writerThread(writer);
+    thread readerThread(reader);
+    writerThread.join();
+    stop.store(true, std::memory_order_relaxed);
+    readerThread.join();
+    REQUIRE(numFinished == numCompletions);
+}
