@@ -25,6 +25,11 @@ namespace gradylib {
                 {
                 }
 
+                EmbeddingImpl(int numInputs, int numOutputs)
+                        : numInputs(numInputs), numOutputs(numOutputs)
+                {
+                }
+
                 int getNumOutputs() const override {
                     return numOutputs;
                 }
@@ -42,6 +47,11 @@ namespace gradylib {
             template<IndexGenerator T>
             Embedding(T const & t, int numOutputs)
                 : impl(std::make_shared<EmbeddingImpl>(t, numOutputs))
+            {
+            }
+
+            Embedding(int numInputs, int numOutputs)
+                    : impl(std::make_shared<EmbeddingImpl>(numInputs, numOutputs))
             {
             }
 

@@ -2,29 +2,30 @@
 // Created by Grady Schofield on 8/10/24.
 //
 
-#ifndef GRADY_LIB_MLP_HPP
-#define GRADY_LIB_MLP_HPP
+#ifndef GRADY_LIB_LINEAR_HPP
+#define GRADY_LIB_LINEAR_HPP
 
 #include<gradylib/nn/Node.hpp>
+#include"Params.hpp"
 
 namespace gradylib {
     namespace nn {
 
         template<typename WeightType = float, typename BiasType = WeightType>
-        class MLP : public Node {
+        class Linear : public Node {
 
-            class MLPImpl : public NodeImpl {
+            class LinearImpl : public NodeImpl {
                 int numInputs;
                 int numOutputs;
                 std::shared_ptr<NodeImpl const> input;
 
             public:
-                MLPImpl(int numInputs, int numOutputs)
+                LinearImpl(int numInputs, int numOutputs)
                     : numInputs(numInputs), numOutputs(numOutputs)
                 {
                 }
 
-                MLPImpl(Node const & input, int numOutputs)
+                LinearImpl(Node const & input, int numOutputs)
                     : numInputs(input.getNumOutputs()), numOutputs(numOutputs), input(getImpl(input))
                 {
                 }
@@ -34,7 +35,7 @@ namespace gradylib {
                 }
             };
 
-            std::shared_ptr<MLPImpl> impl;
+            std::shared_ptr<LinearImpl> impl;
 
             std::shared_ptr<NodeImpl> getImpl() const override {
                 return impl;
@@ -46,14 +47,14 @@ namespace gradylib {
             typedef BiasType bias_type;
 
             /*
-            MLP(int numInputs, int numOutputs)
-                : impl(std::make_shared<MLPImpl>(numInputs, numOutputs))
+            Linear(int numInputs, int numOutputs)
+                : impl(std::make_shared<LinearImpl>(numInputs, numOutputs))
             {
             }
              */
 
-            MLP(Node const & input, Params params)
-                : impl(std::make_shared<MLPImpl>(input, params.getNumOutputs()))
+            Linear(Node const & input, Params params)
+                : impl(std::make_shared<LinearImpl>(input, params.getNumOutputs()))
             {
             }
 
@@ -68,4 +69,4 @@ namespace gradylib {
     }
 }
 
-#endif //GRADY_LIB_MLP_HPP
+#endif //GRADY_LIB_LINEAR_HPP

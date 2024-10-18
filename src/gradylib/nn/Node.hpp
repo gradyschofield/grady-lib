@@ -27,6 +27,7 @@ namespace gradylib {
         public:
             virtual int getNumOutputs() const = 0;
             virtual TrainingReport train(TrainingOptions const & trainingOptions) = 0;
+            decltype(auto) operator()();
             virtual ~Node() = default;
 
             friend NodeImpl;
@@ -51,7 +52,7 @@ namespace gradylib {
 
 #endif
 
-        //typedef std::variant<MLP> Node;
+        //typedef std::variant<Linear> Node;
     }
 }
 
