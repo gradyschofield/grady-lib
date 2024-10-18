@@ -9,7 +9,7 @@
 #include<gradylib/nn/Embedding.hpp>
 #include<gradylib/nn/FeatureIndexLookup.hpp>
 #include<gradylib/nn/MergeLayer.hpp>
-#include<gradylib/nn/MLP.hpp>
+#include<gradylib/nn/Linear.hpp>
 #include<gradylib/nn/TrainingOptions.hpp>
 #include<gradylib/nn/TrainingReport.hpp>
 
