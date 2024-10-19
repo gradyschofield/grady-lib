@@ -8,6 +8,7 @@
 
 #include<gradylib/AltIntHash.hpp>
 #include<gradylib/CompletionPool.hpp>
+#include<gradylib/CompletionPoolPair.hpp>
 #include<gradylib/ThreadPool.hpp>
 #include<gradylib/OpenHashMap.hpp>
 
@@ -73,4 +74,46 @@ TEST_CASE("Completion Pool Heavy"){
     stop.store(true, std::memory_order_relaxed);
     readerThread.join();
     REQUIRE(numFinished == numCompletions);
+}
+
+TEST_CASE("Completion Pool Result Wrapper"){
+    CompletionPool<int> completionPool;
+    ThreadPool threadPool;
+    int numWork = 1000;
+    for (int i = 0; i < numWork; ++i) {
+        threadPool.add(
+                completionPool.wrap([i]() {
+                    return i;
+                }));
+    }
+    threadPool.wait();
+    int results = 0;
+    for (auto t : completionPool) {
+        ++results;
+    }
+    REQUIRE(results == numWork);
+}
+
+TEST_CASE("CompletionPoolPair Result Wrapper"){
+    CompletionPoolPair<int> completionPoolPair;
+    ThreadPool threadPool;
+    int numWork = 1000;
+    int batchSize = 200;
+    int nextSwap = batchSize;
+    for (int i = 0; i < numWork; ++i) {
+        if (i == nextSwap) {
+            nextSwap += batchSize;
+            completionPoolPair.swap();
+        }
+        threadPool.add(
+                completionPoolPair.wrap([i]() {
+                    return i;
+                }));
+    }
+    threadPool.wait();
+    int results = 0;
+    for (auto t : completionPoolPair) {
+        ++results;
+    }
+    REQUIRE(results == numWork);
 }

@@ -25,7 +25,31 @@ SOFTWARE.
 #pragma once
 
 #include<atomic>
+#include<functional>
 #include<utility>
+
+namespace gradylib {
+    template<typename T>
+    class CompletionPool;
+}
+
+namespace gradylib_helpers {
+    template<typename T>
+    class CompletionPoolResultWrapper {
+        std::function<T()> func;
+        gradylib::CompletionPool<T> & completionPool;
+
+    public:
+        CompletionPoolResultWrapper(std::function<T()> && func, gradylib::CompletionPool<T> & completionPool)
+            : func(std::move(func)), completionPool(completionPool)
+        {
+        }
+
+        void operator()() {
+            completionPool.add(func());
+        }
+    };
+}
 
 namespace gradylib {
     template<typename T>
@@ -53,6 +77,12 @@ namespace gradylib {
                 delete n;
                 n = next;
             }
+        }
+
+        template<typename Invocable>
+        requires std::is_invocable_r_v<T, Invocable>
+        gradylib_helpers::CompletionPoolResultWrapper<T> wrap(Invocable && invocable) {
+            return gradylib_helpers::CompletionPoolResultWrapper<T>(std::forward<Invocable>(invocable), *this);
         }
 
         template<typename U>
