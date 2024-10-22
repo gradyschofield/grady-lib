@@ -11,15 +11,15 @@ namespace gradylib {
     namespace nn {
         class FeatureIndexLookup : public Node {
             class FeatureIndexLookupImpl : public NodeImpl {
-                int numOutputs;
+                int numTerms;
             public:
-                FeatureIndexLookupImpl(int numOutputs)
-                    : numOutputs(numOutputs)
+                FeatureIndexLookupImpl(int numTerms)
+                    : numTerms(numTerms)
                 {
                 }
 
                 int getNumOutputs() const override {
-                    return numOutputs;
+                    return numTerms;
                 }
             };
 
@@ -31,8 +31,8 @@ namespace gradylib {
 
         public:
 
-            FeatureIndexLookup(int numOutputs)
-                : impl(std::make_shared<FeatureIndexLookupImpl>(numOutputs))
+            FeatureIndexLookup(int numTerms)
+                : impl(std::make_shared<FeatureIndexLookupImpl>(numTerms))
             {
             }
 

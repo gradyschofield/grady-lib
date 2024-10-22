@@ -11,6 +11,36 @@
 namespace gradylib {
     namespace nn {
 
+        class LinearParams {
+            int numOutputs;
+            Activation activation = ReLU;
+            Bias bias = HasBias;
+
+        public:
+            LinearParams(int numOutputs, Activation activation, Bias bias)
+                    : numOutputs(numOutputs), activation(activation), bias(bias)
+            {
+            }
+
+            LinearParams(int numOutputs, Activation activation)
+                    : numOutputs(numOutputs), activation(activation)
+            {
+            }
+
+            LinearParams(int numOutputs)
+                    : numOutputs(numOutputs)
+            {
+            }
+
+            int getNumOutputs() const {
+                return numOutputs;
+            }
+
+            Activation getActivation() const {
+                return activation;
+            }
+        };
+
         template<typename WeightType = float, typename BiasType = WeightType>
         class Linear : public Node {
 
@@ -53,7 +83,7 @@ namespace gradylib {
             }
              */
 
-            Linear(Node const & input, Params params)
+            Linear(Node const & input, LinearParams params)
                 : impl(std::make_shared<LinearImpl>(input, params.getNumOutputs()))
             {
             }

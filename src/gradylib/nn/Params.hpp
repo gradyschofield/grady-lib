@@ -20,35 +20,23 @@ namespace gradylib {
             NoBias
         };
 
-        class Params {
-            int numOutputs;
-            Activation activation = ReLU;
-            Bias bias = HasBias;
+        enum LeadingDimensionConfig {
+            CacheLine,
+            VectorWidth,
+            NoPad
+        };
+
+        class LayoutParams {
+            std::variant<int64_t, LeadingDimensionConfig> leadingDimension = NoPad;
 
         public:
-            Params(int numOutputs, Activation activation, Bias bias)
-                    : numOutputs(numOutputs), activation(activation), bias(bias)
-            {
-            }
 
-            Params(int numOutputs, Activation activation)
-                    : numOutputs(numOutputs), activation(activation)
-            {
-            }
-
-            Params(int numOutputs)
-                : numOutputs(numOutputs)
-            {
-            }
-
-            int getNumOutputs() const {
+            int64_t getLeadingDimension(int numOutputs) const {
+                // TODO implement vector and cacheline ld computation
                 return numOutputs;
             }
-
-            Activation getActivation() const {
-                return activation;
-            }
         };
+
     }
 }
 #endif //GRADY_LIB_PARAMS_HPP
