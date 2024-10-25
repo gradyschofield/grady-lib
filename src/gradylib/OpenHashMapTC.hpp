@@ -34,12 +34,13 @@ SOFTWARE.
 #include<type_traits>
 #include<vector>
 
+#include"AltIntHash.hpp"
 #include"BitPairSet.hpp"
 #include"Common.hpp"
 
 namespace gradylib {
 
-    template<typename Key, typename Value, template<typename> typename HashFunction = std::hash>
+    template<typename Key, typename Value, template<typename> typename HashFunction = gradylib::AltHash>
     requires std::is_trivially_copyable_v<Key> &&
              std::is_trivially_copyable_v<Value> &&
              std::is_default_constructible_v<Key> &&
@@ -646,14 +647,14 @@ namespace gradylib {
         friend void GRADY_LIB_DEFAULT_OpenHashMapTC_MMAP();
     };
 
-    template<typename Key, typename Value, template<typename> typename HashFunction = std::hash>
+    template<typename Key, typename Value, template<typename> typename HashFunction = gradylib::AltHash>
     void GRADY_LIB_MOCK_OpenHashMapTC_MMAP() {
         OpenHashMapTC<Key, Value, HashFunction>::mmapFunc = [](void *, size_t, int, int, int, off_t) -> void *{
             return MAP_FAILED;
         };
     }
 
-    template<typename Key, typename Value, template<typename> typename HashFunction = std::hash>
+    template<typename Key, typename Value, template<typename> typename HashFunction = gradylib::AltHash>
     void GRADY_LIB_DEFAULT_OpenHashMapTC_MMAP() {
         OpenHashMapTC<Key, Value, HashFunction>::mmapFunc = mmap;
     }

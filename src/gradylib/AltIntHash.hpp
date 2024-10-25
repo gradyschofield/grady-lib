@@ -36,5 +36,19 @@ namespace gradylib {
             return t * 94123453451234 + 4123451435554345;
         }
     };
+
+    template<typename T>
+    struct AltHash {
+        size_t operator()(T const &key) const noexcept {
+            // The hash for integral types on some systems is just the identity.  This can be TERRIBLE for very large maps.
+            if constexpr (std::is_integral_v<T>) {
+                size_t t = key;
+                return t * 94123453451234 + 4123451435554345;
+            }
+            else {
+                return std::hash<T>{}(key);
+            }
+        }
+    };
 }
 

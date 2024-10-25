@@ -59,11 +59,12 @@ SOFTWARE.
 #include<utility>
 #include<vector>
 
+#include"AltIntHash.hpp"
 #include"BitPairSet.hpp"
 
 namespace gradylib {
 
-    template<typename Key, template<typename> typename HashFunction = std::hash>
+    template<typename Key, template<typename> typename HashFunction = gradylib::AltHash>
     requires std::is_trivially_copyable_v<Key> && std::is_default_constructible_v<Key> && std::equality_comparable<Key>
     class OpenHashSetTC {
 
@@ -447,14 +448,14 @@ namespace gradylib {
         friend void GRADY_LIB_DEFAULT_OpenHashSetTC_MMAP();
     };
 
-    template<typename Key, template<typename> typename HashFunction = std::hash>
+    template<typename Key, template<typename> typename HashFunction = gradylib::AltHash>
     void GRADY_LIB_MOCK_OpenHashSetTC_MMAP() {
         OpenHashSetTC<Key, HashFunction>::mmapFunc = [](void *, size_t, int, int, int, off_t) -> void *{
             return MAP_FAILED;
         };
     }
 
-    template<typename Key, template<typename> typename HashFunction = std::hash>
+    template<typename Key, template<typename> typename HashFunction = gradylib::AltHash>
     void GRADY_LIB_DEFAULT_OpenHashSetTC_MMAP() {
         OpenHashSetTC<Key, HashFunction>::mmapFunc = mmap;
     }

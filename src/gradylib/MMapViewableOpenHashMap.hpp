@@ -28,11 +28,13 @@ SOFTWARE.
 #include<sys/mman.h>
 #include<unistd.h>
 
+#include<filesystem>
 #include<functional>
 #include<fstream>
 #include<string>
 #include<utility>
 
+#include"AltIntHash.hpp"
 #include"OpenHashMap.hpp"
 #include"OpenHashMapTC.hpp"
 
@@ -58,7 +60,7 @@ namespace gradylib {
         ValueType::makeView(ptr);
     };
 
-    template<typename Key, typename Value, template<typename> typename HashFunction = std::hash>
+    template<typename Key, typename Value, template<typename> typename HashFunction = gradylib::AltHash>
     requires (serializable_global<Value> || serializable_method<Value>) &&
              (viewable_global<Value> || viewable_method<Value>) &&
              std::is_trivially_copyable_v<Key> &&
@@ -256,14 +258,14 @@ namespace gradylib {
         friend void GRADY_LIB_DEFAULT_MMapViewableOpenHashMap_MMAP();
     };
 
-    template<typename IndexType, typename IntermediateIndexType = uint32_t, template<typename> typename HashFunction = std::hash>
+    template<typename IndexType, typename IntermediateIndexType = uint32_t, template<typename> typename HashFunction = gradylib::AltHash>
     void GRADY_LIB_MOCK_MMapViewableOpenHashMap_MMAP() {
         MMapViewableOpenHashMap<IndexType, IntermediateIndexType, HashFunction>::mmapFunc = [](void *, size_t, int, int, int, off_t) -> void *{
             return MAP_FAILED;
         };
     }
 
-    template<typename IndexType, typename IntermediateIndexType = uint32_t, template<typename> typename HashFunction = std::hash>
+    template<typename IndexType, typename IntermediateIndexType = uint32_t, template<typename> typename HashFunction = gradylib::AltHash>
     void GRADY_LIB_DEFAULT_MMapViewableOpenHashMap_MMAP() {
         MMapViewableOpenHashMap<IndexType, IntermediateIndexType, HashFunction>::mmapFunc = mmap;
     }

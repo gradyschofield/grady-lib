@@ -33,6 +33,7 @@ SOFTWARE.
 #include<string>
 #include<string_view>
 
+#include"AltIntHash.hpp"
 #include"BitPairSet.hpp"
 #include"OpenHashMap.hpp"
 
@@ -41,7 +42,7 @@ namespace gradylib {
     /*
      * This is a readonly data structure for quickly loading an OpenHashMap<IndexType, std::string> from disk
      */
-    template<typename IndexType, template<typename> typename HashFunction = std::hash>
+    template<typename IndexType, template<typename> typename HashFunction = gradylib::AltHash>
     class MMapI2SOpenHashMap {
         size_t const *valueOffsets = nullptr;
         IndexType const * keys = nullptr;

@@ -24,12 +24,14 @@ SOFTWARE.
 
 #pragma once
 
+#include<filesystem>
 #include<fstream>
 #include<future>
 #include<string>
 #include<type_traits>
 #include<vector>
 
+#include"AltIntHash.hpp"
 #include"Common.hpp"
 #include"BitPairSet.hpp"
 #include"ThreadPool.hpp"
@@ -54,7 +56,7 @@ SOFTWARE.
  */
 
 namespace gradylib {
-    template<typename Key, typename Value, template<typename> typename HashFunction = std::hash>
+    template<typename Key, typename Value, template<typename> typename HashFunction = gradylib::AltHash>
     requires std::is_default_constructible_v<Key> && std::is_default_constructible_v<Value>
     class OpenHashMap;
 

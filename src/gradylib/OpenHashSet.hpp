@@ -24,6 +24,7 @@ SOFTWARE.
 
 #pragma once
 
+#include<filesystem>
 #include<fstream>
 #include<future>
 #include<string>
