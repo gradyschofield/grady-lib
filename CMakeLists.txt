@@ -70,3 +70,5 @@ add_executable(replaceRegex src/experiment/ReplaceRegex.cpp)
 
 add_executable(testNN ${SRC} src/test/TestNN.cpp)
 add_executable(testNNFeatureIndexer ${SRC} src/test/TestNNFeatureIndexer.cpp)
+
+add_executable(externalPolymorphism ${SRC} src/experiment/ExternalPolymorphism.cpp)
