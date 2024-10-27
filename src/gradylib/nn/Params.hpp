@@ -6,6 +6,7 @@
 #define GRADY_LIB_PARAMS_HPP
 
 #include<string>
+#include<variant>
 
 namespace gradylib {
     namespace nn {

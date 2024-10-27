@@ -9,8 +9,7 @@
 #include<memory>
 #include<vector>
 
-#include<gradylib/nn/TrainingReport.hpp>
-#include<gradylib/nn/TrainingOptions.hpp>
+#include"Evaluator.hpp"
 
 namespace gradylib {
     namespace nn {
@@ -25,9 +24,8 @@ namespace gradylib {
         class Node {
             virtual std::shared_ptr<NodeImpl> getImpl() const = 0;
         public:
+            Evaluator evaluator();
             virtual int getNumOutputs() const = 0;
-            virtual TrainingReport train(TrainingOptions const & trainingOptions) = 0;
-            decltype(auto) operator()();
             virtual ~Node() = default;
 
             friend NodeImpl;

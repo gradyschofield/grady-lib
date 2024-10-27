@@ -33,15 +33,13 @@ set(SRC
         src/gradylib/ThreadPool.hpp
         src/gradylib/ParallelTraversals.hpp
 
-        src/gradylib/nn/ComputeBackend.hpp
         src/gradylib/nn/Embedding.hpp
         src/gradylib/nn/FeatureIndexLookup.hpp
+        src/gradylib/nn/GraphNode.hpp
         src/gradylib/nn/MergeLayer.hpp
         src/gradylib/nn/Linear.hpp
         src/gradylib/nn/Node.hpp
         src/gradylib/nn/Params.hpp
-        src/gradylib/nn/TrainingOptions.hpp
-        src/gradylib/nn/TrainingReport.hpp
 )
 
 add_executable(testAlignment ${SRC} src/experiment/AlignmentStuff.cpp)

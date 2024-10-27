@@ -149,10 +149,6 @@ namespace gradylib {
                 return impl->getLeadingDimension();
             }
 
-
-            TrainingReport train(TrainingOptions const & trainingOptions) override {
-                throw std::runtime_error("Embedding::train not implemented");
-            }
         };
     }
 }
