@@ -5,7 +5,7 @@
 #ifndef GRADY_LIB_LINEAR_HPP
 #define GRADY_LIB_LINEAR_HPP
 
-#include<gradylib/nn/Node.hpp>
+#include"Layer.hpp"
 #include"Params.hpp"
 
 namespace gradylib {
@@ -42,44 +42,19 @@ namespace gradylib {
         };
 
         template<typename WeightType = float, typename BiasType = WeightType>
-        class Linear : public Node {
-
-            class LinearImpl : public NodeImpl {
-                int numInputs;
-                int numOutputs;
-                std::shared_ptr<NodeImpl const> input;
-
-            public:
-                LinearImpl(int numInputs, int numOutputs)
-                    : numInputs(numInputs), numOutputs(numOutputs)
-                {
-                }
-
-                LinearImpl(Node const & input, int numOutputs)
-                    : numInputs(input.getNumOutputs()), numOutputs(numOutputs), input(getImpl(input))
-                {
-                }
-
-                int getNumOutputs() const override {
-                    return numOutputs;
-                }
-            };
-
-            std::shared_ptr<LinearImpl> impl;
-
-            std::shared_ptr<NodeImpl> getImpl() const override {
-                return impl;
-            }
+        class Linear : public Layer {
 
         public:
 
             typedef WeightType weight_type;
             typedef BiasType bias_type;
 
+            /*
             Linear(int numInputs, int numOutputs)
                 : impl(std::make_shared<LinearImpl>(numInputs, numOutputs))
             {
             }
+             */
 
             Linear(Node const & input, LinearParams params)
                 : impl(std::make_shared<LinearImpl>(input, params.getNumOutputs()))

@@ -67,6 +67,9 @@ target_link_libraries(allTests PRIVATE Catch2 Catch2Main)
 add_executable(replaceRegex src/experiment/ReplaceRegex.cpp)
 
 add_executable(testNN ${SRC} src/test/TestNN.cpp)
+add_executable(testNN2 ${SRC} src/test/TestNN2.cpp)
 add_executable(testNNFeatureIndexer ${SRC} src/test/TestNNFeatureIndexer.cpp)
 
 add_executable(externalPolymorphism ${SRC} src/experiment/ExternalPolymorphism.cpp)
+add_executable(multipleInheritanceOfTemplate ${SRC} src/experiment/MultipleInheritanceOfTemplate.cpp)
+add_executable(tensor ${SRC} src/experiment/Tensor.cpp)

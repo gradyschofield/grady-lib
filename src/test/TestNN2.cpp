@@ -1,29 +1,32 @@
 //
-// Created by Grady Schofield on 8/10/24.
+// Created by Grady Schofield on 10/29/24.
 //
 
-#include<vector>
-
-#include<gradylib/nn/Embedding.hpp>
-#include<gradylib/nn/Evaluator.hpp>
-#include<gradylib/nn/FeatureIndexLookup.hpp>
-#include<gradylib/nn/MergeLayer.hpp>
-#include<gradylib/nn/Linear.hpp>
+#include<gradylib/nn2/Embedding.hpp>
+#include<gradylib/nn2/Evaluator.hpp>
+#include<gradylib/nn2/FeatureIndexLookup.hpp>
+#include<gradylib/nn2/MergeLayer.hpp>
+#include<gradylib/nn2/Linear.hpp>
 
 using namespace gradylib::nn;
 using namespace std;
 
 int main(int argc, char ** argv) {
-    //CsvTrainingFiles csvFiles(list<string>);
-    //FeatureIndexLookup featureIndexLookup("modelSpec.json");
-    FeatureIndexLookup featureIndexLookup(1000);
-    Embedding inputEmbedding1(featureIndexLookup, 96);
-    Embedding inputEmbedding2(featureIndexLookup, 96);
+    Embedding inputEmbedding1(1000, 96);
+    Embedding inputEmbedding2(1000, 96);
     MergeLayer x{inputEmbedding1, inputEmbedding2};
-    Linear layer1(x, 64);
-    Linear layer2(layer1, 32);
+
+    Linear layer1(96 * 2, 64);
+    Linear layer2(64, 32);
+
     MergeLayer layer3(layer1, layer2);
+
     Linear layer4(layer3, {1, Sigmoid});
+
+    auto x1 = inputEmbedding1(??);
+    auto x2 = inputEmbedding2(??);
+    auto y = MergeLayer{x1, x2};
+
 
     Evaluator evaluator = layer4.evaluator()
             .allowPartial(inputEmbedding1)  // This is actually not needed.  We can wait for the first call to partialIn
@@ -40,14 +43,4 @@ int main(int argc, char ** argv) {
             .inputEmedding2(embeddingIdx2)
             .backprop(targets);
 
-    /*
-    Target target("modelSpec.json");
-
-
-     */
-    TrainingOptions trainingOptions("modelSpec.json");
-
-    //layer4.train(target, trainingOptions);
-
-    return 0;
 }
