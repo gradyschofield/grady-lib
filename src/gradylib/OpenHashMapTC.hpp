@@ -360,6 +360,10 @@ namespace gradylib {
         }
 
         Value const & at(Key const &key) const {
+            return const_cast<OpenHashMapTC *>(this)->at(key);
+        }
+
+        Value & at(Key const &key) {
             if (keySize == 0) {
                 std::ostringstream sstr;
                 sstr << "key not found in map";

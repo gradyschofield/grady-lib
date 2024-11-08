@@ -312,9 +312,17 @@ namespace gradylib {
 
         template<typename KeyType>
         requires (std::is_constructible_v<Key, KeyType> ||
+                  std::is_convertible_v<Key, std::remove_cvref_t<KeyType>>) &&
+        gradylib_helpers::equality_comparable<KeyType, Key>
+        Value const & at(KeyType const &key) const {
+            return const_cast<OpenHashMap*>(this)->at(key);
+        }
+
+        template<typename KeyType>
+        requires (std::is_constructible_v<Key, KeyType> ||
                  std::is_convertible_v<Key, std::remove_cvref_t<KeyType>>) &&
                  gradylib_helpers::equality_comparable<KeyType, Key>
-        Value const & at(KeyType const &key) const {
+        Value & at(KeyType const &key) {
             if (keys.size() == 0) {
                 std::ostringstream sstr;
                 sstr << "OpenHashMap doesn't contain key";
