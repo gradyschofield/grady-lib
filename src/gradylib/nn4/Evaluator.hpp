@@ -30,8 +30,9 @@ SOFTWARE.
 
 #include<Accelerate/Accelerate.h>
 
-#include"Expression.hpp"
 #include"BufferAllocator.hpp"
+#include"DataTypeDeriver.hpp"
+#include"Expression.hpp"
 #include"Tensor.hpp"
 
 namespace gradylib {
@@ -54,9 +55,8 @@ namespace gradylib {
 
             template<typename... Ts>
             requires (std::same_as<Tensor, std::remove_cvref_t<Ts>> && ...)
-            Evaluator(Ts&&... ts)
-                    : terminalNodes{(ts.getExpression(), ...)}
-            {
+            Evaluator(Ts&&... ts) {
+                (terminalNodes.push_back(ts.getExpression()), ...);
                 for (Expr & e : terminalNodes) {
                     deriveDatatypesAndAllocateBuffers(e, 64);
                 }
@@ -215,6 +215,28 @@ namespace gradylib {
                 }
                 void operator()(Undefined const & v) {
                     throw gradylibMakeException("Attempt to evaluate Undefined ExpressionType");
+                }
+                void operator()(Concatenate const & v) {
+                    float * out = outputBuffers.at(e->getId()).getPtr<float>();
+                    std::vector<float*> ops;
+                    std::vector<size_t> vectorSizes;
+                    int batchSize = outputBuffers.at(e->getOperands().front()->getId()).getBatchUseCount();
+                    int elementSizeBytes = sizeInBytes(e->getOperands().front()->getDataType());
+                    for (Expr const & expr : e->getOperands()) {
+                        OutputBuffer & ob = outputBuffers.at(expr->getId());
+                        ops.push_back(ob.getPtr<float>());
+                        vectorSizes.push_back(product(expr->getDimensions()));
+                        if (batchSize != ob.getBatchUseCount()) {
+                            throw gradylibMakeException("Batch size mismatch in Concatenate");
+                        }
+                    }
+                    size_t outOff = 0;
+                    for (int b = 0; b < batchSize; ++b) {
+                        for (int i = 0; i < ops.size(); ++i) {
+                            memcpy(&out[outOff], &ops[i][vectorSizes[i] * b], vectorSizes[i] * elementSizeBytes);
+                            outOff += vectorSizes[i];
+                        }
+                    }
                 }
             };
 

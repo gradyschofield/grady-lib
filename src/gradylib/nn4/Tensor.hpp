@@ -91,6 +91,43 @@ namespace gradylib {
                 tensors[expression->getId()] = expression;
             }
 
+            template<typename... Ts>
+            requires (std::same_as<Tensor, std::remove_cvref_t<Ts>> && ...)
+            Tensor(Ts&&... ts) {
+                std::vector<std::vector<int>> allDims;
+                (allDims.push_back(ts.getDimensions()), ...);
+                std::vector<int> firstDim = allDims.front();
+                auto getLastSizes = [](std::vector<int> v) {
+                    for (int i = 0; i < v.size()-1; ++i) {
+                        v[i] = v[i+1];
+                    }
+                    v.pop_back();
+                    return v;
+                };
+                int concatDimSize = 0;
+                auto lastSizes = getLastSizes(allDims.front());
+                concatDimSize += lastSizes[0];
+                std::vector<int> operandSizes{allDims.front()[0]};
+                for (int i = 1; i < allDims.size(); ++i) {
+                    if (lastSizes != getLastSizes(allDims[i])) {
+                        throw gradylibMakeException("Sizes don't match in concatenation");
+                    }
+                    concatDimSize += allDims[i][0];
+                    operandSizes.push_back(allDims[i][0]);
+                }
+                std::vector<DataType> dt;
+                (dt.push_back(ts.getDataType()), ...);
+                for (int i = 0; i < dt.size(); ++i) {
+                    if (dt[0] != dt[i]) {
+                        throw gradylibMakeException("Datatypes don't match in concatenation");
+                    }
+                }
+                auto dimension(allDims[0]);
+                dimension[0] = concatDimSize;
+                expression = make_shared<Expression>(Concatenate{operandSizes, lastSizes}, EXPR_ID++, dt[0], dimension, ts.getExpression()...);
+                std::cout << dimension[0] << "\n";
+            }
+
             Tensor(std::shared_ptr<Expression> && ptr)
                     : expression(move(ptr))
             {
@@ -107,6 +144,10 @@ namespace gradylib {
 
             std::vector<int> & getDimensions() {
                 return expression->getDimensions();
+            }
+
+            DataType getDataType() const {
+                return expression->getDataType();
             }
 
             void setName(std::string name) {
@@ -144,7 +185,7 @@ namespace gradylib {
                         retDim.push_back(d[i]);
                     }
                 }
-                return Tensor{make_shared<Expression>(Contraction{axis}, EXPR_ID++, Derived, retDim, this->getExpression(), (ts.getExpression(), ...))};
+                return Tensor{make_shared<Expression>(Contraction{axis}, EXPR_ID++, Derived, retDim, this->getExpression(), ts.getExpression()...)};
             }
 
             template<typename T>
@@ -173,6 +214,16 @@ namespace gradylib {
 
             friend Tensor sigmoid(Tensor const & t) {
                 return Tensor{make_shared<Expression>(ElementwiseOperator{Sigmoid{}}, EXPR_ID++, Derived, t.getDimensions(), t.getExpression())};
+            }
+
+            template<typename... Ts>
+            requires (std::same_as<Tensor, std::remove_cvref_t<Ts>> && ...)
+            friend decltype(auto) concatenate(Ts&&... ts) {
+                if constexpr (sizeof...(Ts) == 1) {
+                    return std::forward<Ts...>(ts...);
+                } else {
+                    return Tensor(ts...);
+                }
             }
         };
     }

@@ -42,8 +42,8 @@ namespace gradylib {
         class Expression;
 
         inline std::unordered_map<int, std::shared_ptr<Expression>> tensors;
-        class Relu{};
-        class Sigmoid{};
+        class Relu {};
+        class Sigmoid {};
         class Add {
             template<typename T>
             T operator()(T x, T y) {return x + y;};
@@ -153,6 +153,22 @@ namespace gradylib {
 
         class Undefined{};
 
+        class Concatenate {
+            std::vector<int> operandSizes;
+            std::vector<int> commonDimensions;
+        public:
+            Concatenate(std::vector<int> operandSizes, std::vector<int> commonDimensions)
+                : operandSizes(operandSizes), commonDimensions(commonDimensions)
+            {
+            }
+            std::vector<int> const & getOperandSizes() {
+                return operandSizes;
+            }
+            std::vector<int> const & getCommonDimensions() {
+                return commonDimensions;
+            }
+        };
+
         struct Print {
             void operator()(Value const & v) { std::cout << "Value "; for (int i : v.getDimensions()) std::cout << i << " ";}
             void operator()(Contraction const & v) { std::cout << "Contraction "; }
@@ -167,6 +183,7 @@ namespace gradylib {
             void operator()(Relu const & v) { std::cout << "ReLU "; }
             void operator()(Sigmoid const & v) { std::cout << "Sigmoid "; }
             void operator()(Add const & v) { std::cout << "Add "; }
+            void operator()(Concatenate const & v) { std::cout << "Concatenate "; }
         };
 
         using ExpressionType = std::variant<
@@ -176,7 +193,8 @@ namespace gradylib {
                 BinaryOperator,
                 AggregateSlices,
                 SliceList,
-                Undefined
+                Undefined,
+                Concatenate
         >;
 
         typedef std::shared_ptr<Expression> Expr;
