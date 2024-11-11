@@ -4,11 +4,11 @@
 
 #include<vector>
 
-#include<gradylib/nn/Embedding.hpp>
-#include<gradylib/nn/Evaluator.hpp>
-#include<gradylib/nn/FeatureIndexLookup.hpp>
-#include<gradylib/nn/MergeLayer.hpp>
-#include<gradylib/nn/Linear.hpp>
+#include"gradylib/nn/Embedding.hpp"
+#include"gradylib/nn/Evaluator.hpp"
+#include"gradylib/nn/FeatureIndexLookup.hpp"
+#include"gradylib/nn/MergeLayer.hpp"
+#include"gradylib/nn/Linear.hpp"
 
 using namespace gradylib::nn;
 using namespace std;

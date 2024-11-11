@@ -3,11 +3,19 @@ project(grady_lib)
 
 set(CMAKE_CXX_STANDARD 26)
 
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
-set(CMAKE_CXX_FLAGS_PROFILE "-O3 -pg -g")
-set(CMAKE_CXX_FLAGS_COVERAGE "-Og -g -fprofile-arcs -ftest-coverage")
-set(CMAKE_CXX_FLAGS_SANADDR "-O3 -g -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer")
+if(APPLE)
+    set(EXTRA_CXX_FLAGS "-DACCELERATE_NEW_LAPACK")
+endif()
+
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 ${EXTRA_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g ${EXTRA_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS_PROFILE "-O3 -pg -g ${EXTRA_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS_COVERAGE "-Og -g -fprofile-arcs -ftest-coverage ${EXTRA_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS_SANADDR "-O3 -g -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer ${EXTRA_CXX_FLAGS}")
+
+if (APPLE)
+    set(EXTRA_LFLAGS "-framework Accelerate")
+endif()
 
 include_directories(
         src/
@@ -64,12 +72,34 @@ set(TEST_SRC
 add_executable(allTests ${SRC} ${TEST_SRC})
 target_link_libraries(allTests PRIVATE Catch2 Catch2Main)
 
+set(NN_SRC
+        src/gradylib/nn4/BufferAllocator.hpp
+        src/gradylib/nn4/DataType.hpp
+        src/gradylib/nn4/DataTypeDeriver.hpp
+        src/gradylib/nn4/Evaluator.hpp
+        src/gradylib/nn4/Expression.hpp
+        src/gradylib/nn4/Initializer.hpp
+        src/gradylib/nn4/OutputBuffer.hpp
+        src/gradylib/nn4/PrettyPrinter.hpp
+        src/gradylib/nn4/Tensor.hpp
+        src/gradylib/nn4/Util.hpp
+)
+
+set(NN_TEST_SRC
+        src/test/nn/TestMLP.cpp
+)
+
+add_executable(nnTests ${SRC} ${NN_SRC} ${NN_TEST_SRC})
+target_link_libraries(nnTests PRIVATE Catch2 Catch2Main ${EXTRA_LFLAGS})
+
 add_executable(replaceRegex src/experiment/ReplaceRegex.cpp)
 
-add_executable(testNN ${SRC} src/test/TestNN.cpp)
-add_executable(testNN2 ${SRC} src/test/TestNN2.cpp)
-add_executable(testNNFeatureIndexer ${SRC} src/test/TestNNFeatureIndexer.cpp)
+add_executable(testNN ${SRC} src/test/nn/TestNN.cpp)
+add_executable(testNN2 ${SRC} src/test/nn/TestNN2.cpp)
+add_executable(testNNFeatureIndexer ${SRC} src/test/nn/testNNFeatureIndexer.cpp)
 
 add_executable(externalPolymorphism ${SRC} src/experiment/ExternalPolymorphism.cpp)
 add_executable(multipleInheritanceOfTemplate ${SRC} src/experiment/MultipleInheritanceOfTemplate.cpp)
-add_executable(tensor ${SRC} src/experiment/Tensor.cpp)
+
+add_executable(tensor ${SRC} src/gradylib/nn4/Tensor.cpp)
+target_link_libraries(tensor ${EXTRA_LFLAGS})

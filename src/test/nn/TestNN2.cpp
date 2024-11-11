@@ -2,11 +2,11 @@
 // Created by Grady Schofield on 10/29/24.
 //
 
-#include<gradylib/nn2/Embedding.hpp>
-#include<gradylib/nn2/Evaluator.hpp>
-#include<gradylib/nn2/FeatureIndexLookup.hpp>
-#include<gradylib/nn2/MergeLayer.hpp>
-#include<gradylib/nn2/Linear.hpp>
+#include"gradylib/nn2/Embedding.hpp"
+#include"gradylib/nn2/Evaluator.hpp"
+#include"gradylib/nn2/FeatureIndexLookup.hpp"
+#include"gradylib/nn2/MergeLayer.hpp"
+#include"gradylib/nn2/Linear.hpp"
 
 using namespace gradylib::nn;
 using namespace std;
