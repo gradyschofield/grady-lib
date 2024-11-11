@@ -40,10 +40,8 @@ int main(int argc, char ** argv) {
     out1.setName("out");
 
     PrettyPrinter::print(out1);
-    DatatypeDeriver::deriveDatatypes(out1);
-    TemporaryAllocator::findAllocations(out1, 64);
-    Initializer::initialize(out1);
     Evaluator evaluator(out1);
+    Initializer::initialize(out1);
     evaluator.setBatchSize(64);
     evaluator.partialIn(sliceList, vector<int>{1, 2, 3});
     evaluator.in(sliceList, vector<int>{4, 5, 6, 7});

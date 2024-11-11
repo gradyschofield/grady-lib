@@ -32,7 +32,7 @@ SOFTWARE.
 namespace gradylib {
     namespace nn {
 
-        class TemporaryAllocator {
+        class BufferAllocator {
         public:
 
             static void findExprAllocations(Expression const & expression, OpenHashMap<int, OutputBuffer> & bufferMap, int batchSizeIn) {

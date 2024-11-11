@@ -28,10 +28,8 @@ TEST_CASE("MLP"){
     auto out1 = addPerceptron(1, l2_1);
     out1.setName("out");
 
-    DatatypeDeriver::deriveDatatypes(out1);
-    TemporaryAllocator::findAllocations(out1, 64);
-    Initializer::initialize(out1);
     Evaluator evaluator(out1);
+    Initializer::initialize(out1);
     evaluator.setBatchSize(64);
     evaluator.partialIn(sliceList, vector<int>{1, 2, 3});
     evaluator.in(sliceList, vector<int>{4, 5, 6, 7});
@@ -56,6 +54,4 @@ TEST_CASE("MLP"){
     for (int i = 0; i < 1; ++i) {
         REQUIRE(outptr[i] == 1292321.0f);
     }
-    //evaluator.in("in", vector<int>{});
-    cout << "Result: " << *static_cast<float*>(ret[0]) << "\n";
 }

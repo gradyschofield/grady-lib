@@ -40,10 +40,16 @@ namespace gradylib {
             int batchSize = 0;
             std::vector<Expression> terminalNodes;
 
+            void deriveDatatypesAndAllocateBuffers(Expression & e, int batchSize) {
+                DatatypeDeriver::deriveDatatypes(e);
+                BufferAllocator::findAllocations(e, 64);
+            }
+
         public:
             Evaluator(Tensor const & t)
                     : terminalNodes{t.getExpression()}
             {
+                deriveDatatypesAndAllocateBuffers(terminalNodes.front(), 64);
             }
 
             template<typename... Ts>
@@ -51,6 +57,9 @@ namespace gradylib {
             Evaluator(Ts&&... ts)
                     : terminalNodes{(ts.getExpression(), ...)}
             {
+                for (Expression & e : terminalNodes) {
+                    deriveDatatypesAndAllocateBuffers(e, 64);
+                }
             }
 
             void evaluate() {
@@ -81,7 +90,7 @@ namespace gradylib {
             void partialInRecurse(Expression const & e, SliceList const & sliceList, std::vector<int> const & slices) {
                 if (AggregateSlices const * as = get_if<AggregateSlices>(&e.getExpressionType())) {
                     if (sliceList.getId() == as->getSliceList().getId()) {
-                        TemporaryAllocator::findExprAllocations(e, partialBuffers, 1);
+                        BufferAllocator::findExprAllocations(e, partialBuffers, 1);
                         OutputBuffer & pb = partialBuffers.at(e.getId());
                         computeAggregateSlices(e, pb, slices);
                         std::cout << "Do the slice into " << pb << "\n";
@@ -101,7 +110,7 @@ namespace gradylib {
             void inRecurse(Expression const & e, SliceList const & sliceList, std::vector<int> const & slices) {
                 if (AggregateSlices const * as = get_if<AggregateSlices>(&e.getExpressionType())) {
                     if (sliceList.getId() == as->getSliceList().getId()) {
-                        TemporaryAllocator::findExprAllocations(e, outputBuffers, 1);
+                        BufferAllocator::findExprAllocations(e, outputBuffers, 1);
                         OutputBuffer & ob = outputBuffers.at(e.getId());
                         auto pb = partialBuffers.get(e.getId());
                         bool preFilled = pb.has_value();
@@ -127,7 +136,7 @@ namespace gradylib {
             void setBatchSize(int batchSize) {
                 this->batchSize = batchSize;
                 for (Expression const & expression : terminalNodes) {
-                    TemporaryAllocator::findAllocations(expression, 64);
+                    BufferAllocator::findAllocations(expression, 64);
                 }
             }
 
