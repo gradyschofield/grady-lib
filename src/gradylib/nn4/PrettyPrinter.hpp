@@ -34,10 +34,10 @@ namespace  gradylib {
         class PrettyPrinter {
         public:
 
-            static void print(Expression const & expression) {
+            static void print(Expr const & expression) {
                 std::cout << "( ";
-                std::visit(Print{}, expression.getExpressionType());
-                for (auto && op : expression.getOperands()) {
+                std::visit(Print{}, expression->getExpressionType());
+                for (auto && op : expression->getOperands()) {
                     print(op);
                 }
                 std::cout << " )";

@@ -179,24 +179,26 @@ namespace gradylib {
                 Undefined
         >;
 
+        typedef std::shared_ptr<Expression> Expr;
+
         class Expression {
             ExpressionType expressionType = Undefined{};
             int id;
             DataType dataType;
             std::vector<int> dimensions;
             std::optional<std::string> name;
-            std::vector<Expression> operands;
+            std::vector<Expr> operands;
         public:
 
             ExpressionType const & getExpressionType() const {
                 return expressionType;
             }
 
-            std::vector<Expression> const & getOperands() const {
+            std::vector<Expr> const & getOperands() const {
                 return operands;
             }
 
-            std::vector<Expression> & getOperands() {
+            std::vector<Expr> & getOperands() {
                 return operands;
             }
 

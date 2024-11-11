@@ -33,16 +33,16 @@ namespace gradylib {
     namespace nn {
         class Initializer {
         public:
-            static void initializeRecurse(Expression const & expression) {
-                if (Value const * v = get_if<Value>(&expression.getExpressionType())) {
-                    OutputBuffer & ob = outputBuffers.at(expression.getId());
+            static void initializeRecurse(Expr const & expression) {
+                if (Value const * v = get_if<Value>(&expression->getExpressionType())) {
+                    OutputBuffer & ob = outputBuffers.at(expression->getId());
                     float * weights = ob.getPtr<float>();
-                    for (int i = 0; i < product(expression.getDimensions()); ++i) {
+                    for (int i = 0; i < product(expression->getDimensions()); ++i) {
                         weights[i] = 1.0;
                     }
                     ob.setInitialized();
                 }
-                for (Expression const & e : expression.getOperands()) {
+                for (Expr const & e : expression->getOperands()) {
                     initializeRecurse(e);
                 }
             }

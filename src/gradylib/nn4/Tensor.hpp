@@ -43,7 +43,7 @@ namespace gradylib {
     namespace nn {
 
         class Tensor {
-            std::shared_ptr<Expression> expression;
+            Expr expression;
 
             void addToTable() {
                 tensors.emplace(expression->getId(), expression);
@@ -51,12 +51,12 @@ namespace gradylib {
 
         public:
 
-            Expression const & getExpression() const {
-                return *expression;
+            Expr const & getExpression() const {
+                return expression;
             }
 
-            Expression & getExpression() {
-                return *expression;
+            Expr & getExpression() {
+                return expression;
             }
 
             int firstDimension() const {

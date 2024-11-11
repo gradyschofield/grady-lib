@@ -128,12 +128,12 @@ namespace gradylib {
         OpenHashMap<int, OutputBuffer> partialBuffers;
 
         void * getPartialPtr(Tensor const & tensor) {
-            auto ob = partialBuffers.get(tensor.getExpression().getId());
+            auto ob = partialBuffers.get(tensor.getExpression()->getId());
             return ob.has_value() ? ob.value().getPtr<void>() : nullptr;
         }
 
         void * getOutputPtr(Tensor const & tensor) {
-            auto ob = outputBuffers.get(tensor.getExpression().getId());
+            auto ob = outputBuffers.get(tensor.getExpression()->getId());
             return ob.has_value() ? ob.value().getPtr<void>() : nullptr;
         }
     }

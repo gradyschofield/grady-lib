@@ -31,9 +31,9 @@ namespace gradylib {
     namespace nn {
         class DatatypeDeriver {
         public:
-            static void deriveDatatypes(Expression & expression) {
-                expression.setDataType(Float);
-                for (Expression & e : expression.getOperands()) {
+            static void deriveDatatypes(Expr & expression) {
+                expression->setDataType(Float);
+                for (Expr & e : expression->getOperands()) {
                     deriveDatatypes(e);
                 }
             }

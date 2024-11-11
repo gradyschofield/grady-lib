@@ -35,18 +35,18 @@ namespace gradylib {
         class BufferAllocator {
         public:
 
-            static void findExprAllocations(Expression const & expression, OpenHashMap<int, OutputBuffer> & bufferMap, int batchSizeIn) {
-                int batchSize = holds_alternative<Value>(expression.getExpressionType()) ? 1 : batchSizeIn;
-                size_t numElements = product(expression.getDimensions());
-                auto ob = bufferMap.get(expression.getId());
-                if (!ob.has_value() || !ob.value().atLeastAsLarge(expression.getDataType(), numElements, batchSize)) {
-                    bufferMap.put(expression.getId(), OutputBuffer(expression.getDataType(), numElements, batchSize));
+            static void findExprAllocations(Expr const & expression, OpenHashMap<int, OutputBuffer> & bufferMap, int batchSizeIn) {
+                int batchSize = holds_alternative<Value>(expression->getExpressionType()) ? 1 : batchSizeIn;
+                size_t numElements = product(expression->getDimensions());
+                auto ob = bufferMap.get(expression->getId());
+                if (!ob.has_value() || !ob.value().atLeastAsLarge(expression->getDataType(), numElements, batchSize)) {
+                    bufferMap.put(expression->getId(), OutputBuffer(expression->getDataType(), numElements, batchSize));
                 }
             }
 
-            static void findAllocations(Expression const & expression, int batchSize) {
+            static void findAllocations(Expr const & expression, int batchSize) {
                 findExprAllocations(expression, outputBuffers, batchSize);
-                for (Expression const & e : expression.getOperands()) {
+                for (Expr const & e : expression->getOperands()) {
                     findAllocations(e, batchSize);
                 }
             }
