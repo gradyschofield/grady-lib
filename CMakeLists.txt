@@ -82,6 +82,7 @@ set(NN_SRC
         src/gradylib/nn4/OutputBuffer.hpp
         src/gradylib/nn4/PrettyPrinter.hpp
         src/gradylib/nn4/Tensor.hpp
+        src/gradylib/nn4/Trainer.hpp
         src/gradylib/nn4/Util.hpp
 )
 
