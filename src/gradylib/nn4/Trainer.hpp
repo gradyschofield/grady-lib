@@ -26,16 +26,57 @@ SOFTWARE.
 
 #include<vector>
 
+#include"gradylib/OpenHashMap.hpp"
+
+#include"gradylib/nn4/activation/Scalarati.hpp"
 #include"Expression.hpp"
+#include"OutputBuffer.hpp"
 #include"Tensor.hpp"
+#include"Util.hpp"
 
 namespace gradylib {
     namespace nn {
+
         class Trainer {
             std::vector<Expr> terminalNodes;
-        public:
-            Trainer(Tensor const & t) {
+            OpenHashMap<int, OutputBuffer> backpropagatingFactor;
+            OpenHashMap<int, OutputBuffer> derivative;
 
+
+            static void findExprAllocations(Expr const & expression, OpenHashMap<int, OutputBuffer> & bufferMap, int batchSizeIn) {
+                int batchSize = holds_alternative<Value>(expression->getExpressionType()) ? 1 : batchSizeIn;
+                size_t numElements = product(expression->getDimensions());
+                auto ob = bufferMap.get(expression->getId());
+                if (!ob.has_value() || !ob.value().atLeastAsLarge(expression->getDataType(), numElements, batchSize)) {
+                    bufferMap.put(expression->getId(), OutputBuffer(expression->getDataType(), numElements, batchSize));
+                }
+            }
+
+            void findAllocations(Expr const & expression, int batchSize) {
+                findExprAllocations(expression, backpropagatingFactor, batchSize);
+                for (Expr const & e : expression->getOperands()) {
+                    findAllocations(e, batchSize);
+                }
+            }
+
+        public:
+            Trainer() = default;
+
+            Trainer(Tensor const & t, activation::Intermediate lossFunc) {
+                using namespace activation;
+                lossFunc.with(y=1);
+            }
+
+            template<typename Labels, typename Samples>
+            void train(Labels && labels, Samples && samples) {
+            }
+
+            struct Sample {
+                OpenHashMap<std::string, Tensor> tensorInput;
+                OpenHashMap<std::string, std::vector<int>> sliceInput;
+            };
+
+            void train(std::vector<int> && labels, std::vector<std::vector<int>> && samples) {
             }
         };
     }

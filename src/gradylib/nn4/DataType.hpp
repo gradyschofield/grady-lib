@@ -63,7 +63,7 @@ namespace gradylib {
             static int const sizeInBytes = 0;
         };
 
-        int sizeInBytes(DataType dataType) {
+        inline int sizeInBytes(DataType dataType) {
             switch(dataType) {
                 case Float: return DataTypeTraits<Float>::sizeInBytes;
                 default: return 0;

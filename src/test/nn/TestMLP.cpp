@@ -4,7 +4,6 @@
 #include<vector>
 
 #include<gradylib/nn4/Tensor.hpp>
-#include<gradylib/nn4/BufferAllocator.hpp>
 #include<gradylib/nn4/Initializer.hpp>
 #include<gradylib/nn4/Evaluator.hpp>
 
@@ -27,28 +26,28 @@ TEST_CASE("Basic MLP"){
     auto out1 = addPerceptron(1, l2_1);
 
     Evaluator evaluator(out1);
-    Initializer::initialize(out1);
+    Initializer::initialize(evaluator, out1);
     evaluator.setBatchSize(64);
     evaluator.partialIn(sliceList, vector<int>{1, 2, 3});
     evaluator.in(sliceList, vector<int>{4, 5, 6, 7});
     vector<void *> ret = evaluator.result();
-    float * pptr = static_cast<float*>(getPartialPtr(emb));
+    float * pptr = static_cast<float*>(evaluator.getPartialPtr(emb));
     for (int i = 0; i < 90; ++i) {
         REQUIRE(pptr[i] == 3.0f);
     }
-    float * optr = static_cast<float*>(getOutputPtr(emb));
+    float * optr = static_cast<float*>(evaluator.getOutputPtr(emb));
     for (int i = 0; i < 90; ++i) {
         REQUIRE(optr[i] == 7);
     }
-    float * optr1= static_cast<float*>(getOutputPtr(l1_1));
+    float * optr1= static_cast<float*>(evaluator.getOutputPtr(l1_1));
     for (int i = 0; i < 64; ++i) {
         REQUIRE(optr1[i] == 631);
     }
-    float * optr2 = static_cast<float*>(getOutputPtr(l2_1));
+    float * optr2 = static_cast<float*>(evaluator.getOutputPtr(l2_1));
     for (int i = 0; i < 32; ++i) {
         REQUIRE(optr2[i] == 40385);
     }
-    float * outptr = static_cast<float*>(getOutputPtr(out1));
+    float * outptr = static_cast<float*>(evaluator.getOutputPtr(out1));
     for (int i = 0; i < 1; ++i) {
         REQUIRE(outptr[i] == 1292321.0f);
     }
@@ -75,29 +74,29 @@ TEST_CASE("Multi out MLP"){
     auto out2 = addPerceptron(1, l2_2);
 
     Evaluator evaluator(out1, out2);
-    Initializer::initialize(out1);
-    Initializer::initialize(out2);
+    Initializer::initialize(evaluator, out1);
+    Initializer::initialize(evaluator, out2);
     evaluator.setBatchSize(64);
     evaluator.partialIn(sliceList, vector<int>{1, 2, 3});
     evaluator.in(sliceList, vector<int>{4, 5, 6, 7});
     vector<void *> ret = evaluator.result();
-    float * pptr = static_cast<float*>(getPartialPtr(emb));
+    float * pptr = static_cast<float*>(evaluator.getPartialPtr(emb));
     for (int i = 0; i < 90; ++i) {
         REQUIRE(pptr[i] == 3.0f);
     }
-    float * optr = static_cast<float*>(getOutputPtr(emb));
+    float * optr = static_cast<float*>(evaluator.getOutputPtr(emb));
     for (int i = 0; i < 90; ++i) {
         REQUIRE(optr[i] == 7);
     }
-    float * optr1= static_cast<float*>(getOutputPtr(l1_1));
+    float * optr1= static_cast<float*>(evaluator.getOutputPtr(l1_1));
     for (int i = 0; i < 64; ++i) {
         REQUIRE(optr1[i] == 631);
     }
-    float * optr2 = static_cast<float*>(getOutputPtr(l2_1));
+    float * optr2 = static_cast<float*>(evaluator.getOutputPtr(l2_1));
     for (int i = 0; i < 32; ++i) {
         REQUIRE(optr2[i] == 40385);
     }
-    float * outptr = static_cast<float*>(getOutputPtr(out1));
+    float * outptr = static_cast<float*>(evaluator.getOutputPtr(out1));
     for (int i = 0; i < 1; ++i) {
         REQUIRE(outptr[i] == 1292321.0f);
     }
@@ -124,28 +123,28 @@ TEST_CASE("Merge MLP"){
 
 
     Evaluator evaluator(out1);
-    Initializer::initialize(out1);
+    Initializer::initialize(evaluator, out1);
     evaluator.setBatchSize(64);
     evaluator.partialIn(sliceList, vector<int>{1, 2, 3});
     evaluator.in(sliceList, vector<int>{4, 5, 6, 7});
     vector<void *> ret = evaluator.result();
-    float * pptr = static_cast<float*>(getPartialPtr(emb));
+    float * pptr = static_cast<float*>(evaluator.getPartialPtr(emb));
     for (int i = 0; i < 90; ++i) {
         REQUIRE(pptr[i] == 3.0f);
     }
-    float * optr = static_cast<float*>(getOutputPtr(emb));
+    float * optr = static_cast<float*>(evaluator.getOutputPtr(emb));
     for (int i = 0; i < 90; ++i) {
         REQUIRE(optr[i] == 7);
     }
-    float * optr1= static_cast<float*>(getOutputPtr(l1_1));
+    float * optr1= static_cast<float*>(evaluator.getOutputPtr(l1_1));
     for (int i = 0; i < 64; ++i) {
         REQUIRE(optr1[i] == 631);
     }
-    float * optr2 = static_cast<float*>(getOutputPtr(l2_1));
+    float * optr2 = static_cast<float*>(evaluator.getOutputPtr(l2_1));
     for (int i = 0; i < 32; ++i) {
         REQUIRE(optr2[i] == 40385);
     }
-    float * outptr = static_cast<float*>(getOutputPtr(out1));
+    float * outptr = static_cast<float*>(evaluator.getOutputPtr(out1));
     for (int i = 0; i < 1; ++i) {
         REQUIRE(outptr[i] == 1332705.0f);
     }

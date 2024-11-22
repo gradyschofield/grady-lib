@@ -33,7 +33,8 @@ SOFTWARE.
 #include<variant>
 #include<vector>
 
-#include"gradylib/nn4/DataType.hpp"
+#include"activation/Scalarati.hpp"
+#include"DataType.hpp"
 
 namespace gradylib {
     namespace nn {
@@ -49,7 +50,7 @@ namespace gradylib {
             T operator()(T x, T y) {return x + y;};
         };
 
-        using ElementwiseFunction = std::variant<Relu, Sigmoid>;
+        using ElementwiseFunction = std::variant<Relu, Sigmoid, activation::Intermediate>;
         using BinaryFunction = std::variant<Add>;
 
         template<typename T>
@@ -69,6 +70,12 @@ namespace gradylib {
             void operator()(Sigmoid const &) {
                 for (size_t i = 0; i < numElements; ++i) {
                     out[offOut++] = 1 / (1 + exp(-op1[off1++]));
+                }
+            }
+
+            void operator()(activation::Intermediate const & x) {
+                for (size_t i = 0; i < numElements; ++i) {
+                    out[offOut++] = x.evaluate(op1[off1++]);
                 }
             }
         };
@@ -182,6 +189,7 @@ namespace gradylib {
             void operator()(Undefined const & v) { std::cout << "Undefined "; }
             void operator()(Relu const & v) { std::cout << "ReLU "; }
             void operator()(Sigmoid const & v) { std::cout << "Sigmoid "; }
+            void operator()(activation::Intermediate const & v) { std::cout << "activation::Intermediate "; }
             void operator()(Add const & v) { std::cout << "Add "; }
             void operator()(Concatenate const & v) { std::cout << "Concatenate "; }
         };

@@ -30,9 +30,10 @@ SOFTWARE.
 
 #include<Accelerate/Accelerate.h>
 
-#include"BufferAllocator.hpp"
 #include"DataTypeDeriver.hpp"
 #include"Expression.hpp"
+#include"OutputBuffer.hpp"
+#include"Util.hpp"
 #include"Tensor.hpp"
 
 namespace gradylib {
@@ -43,7 +44,26 @@ namespace gradylib {
 
             void deriveDatatypesAndAllocateBuffers(Expr & e, int batchSize) {
                 DatatypeDeriver::deriveDatatypes(e);
-                BufferAllocator::findAllocations(e, 64);
+                findAllocations(e, 64);
+            }
+
+            OpenHashMap<int, OutputBuffer> outputBuffers;
+            OpenHashMap<int, OutputBuffer> partialBuffers;
+
+           static void findExprAllocations(Expr const & expression, OpenHashMap<int, OutputBuffer> & bufferMap, int batchSizeIn) {
+                int batchSize = holds_alternative<Value>(expression->getExpressionType()) ? 1 : batchSizeIn;
+                size_t numElements = product(expression->getDimensions());
+                auto ob = bufferMap.get(expression->getId());
+                if (!ob.has_value() || !ob.value().atLeastAsLarge(expression->getDataType(), numElements, batchSize)) {
+                    bufferMap.put(expression->getId(), OutputBuffer(expression->getDataType(), numElements, batchSize));
+                }
+            }
+
+            void findAllocations(Expr const & expression, int batchSize) {
+                findExprAllocations(expression, outputBuffers, batchSize);
+                for (Expr const & e : expression->getOperands()) {
+                    findAllocations(e, batchSize);
+                }
             }
 
         public:
@@ -90,7 +110,7 @@ namespace gradylib {
             void partialInRecurse(Expr const & e, SliceList const & sliceList, std::vector<int> const & slices) {
                 if (AggregateSlices const * as = get_if<AggregateSlices>(&e->getExpressionType())) {
                     if (sliceList.getId() == as->getSliceList().getId()) {
-                        BufferAllocator::findExprAllocations(e, partialBuffers, 1);
+                        findExprAllocations(e, partialBuffers, 1);
                         OutputBuffer & pb = partialBuffers.at(e->getId());
                         computeAggregateSlices(e, pb, slices);
                         std::cout << "Do the slice into " << pb << "\n";
@@ -110,7 +130,7 @@ namespace gradylib {
             void inRecurse(Expr const & e, SliceList const & sliceList, std::vector<int> const & slices) {
                 if (AggregateSlices const * as = get_if<AggregateSlices>(&e->getExpressionType())) {
                     if (sliceList.getId() == as->getSliceList().getId()) {
-                        BufferAllocator::findExprAllocations(e, outputBuffers, 1);
+                        findExprAllocations(e, outputBuffers, 1);
                         OutputBuffer & ob = outputBuffers.at(e->getId());
                         auto pb = partialBuffers.get(e->getId());
                         bool preFilled = pb.has_value();
@@ -136,12 +156,31 @@ namespace gradylib {
             void setBatchSize(int batchSize) {
                 this->batchSize = batchSize;
                 for (Expr const & expression : terminalNodes) {
-                    BufferAllocator::findAllocations(expression, 64);
+                    findAllocations(expression, 64);
                 }
+            }
+
+            void * getPartialPtr(Tensor const & tensor) {
+                auto ob = partialBuffers.get(tensor.getExpression()->getId());
+                return ob.has_value() ? ob.value().getPtr<void>() : nullptr;
+            }
+
+            void * getOutputPtr(Tensor const & tensor) {
+                auto ob = outputBuffers.get(tensor.getExpression()->getId());
+                return ob.has_value() ? ob.value().getPtr<void>() : nullptr;
+            }
+
+            decltype(auto) getPartialBuffer(int id) {
+                return partialBuffers.get(id);
+            }
+
+            decltype(auto) getOutputBuffer(int id) {
+                return outputBuffers.get(id);
             }
 
             struct ComputeExpression{
                 Expr const & e;
+                Evaluator & evaluator;
 
                 void operator()(Value const & v) {
                     throw gradylibMakeException("Attempt to evaluate Value ExpressionType.  It must not have been initialized.");
@@ -157,9 +196,9 @@ namespace gradylib {
                             ) {
                         Expr const & op1 = e->getOperands().front();
                         Expr const & op2 = e->getOperands().back();
-                        OutputBuffer & ob1 = outputBuffers.at(op1->getId());
-                        OutputBuffer & ob2 = outputBuffers.at(op2->getId());
-                        OutputBuffer & outOb = outputBuffers.at(e->getId());
+                        OutputBuffer & ob1 = evaluator.outputBuffers.at(op1->getId());
+                        OutputBuffer & ob2 = evaluator.outputBuffers.at(op2->getId());
+                        OutputBuffer & outOb = evaluator.outputBuffers.at(e->getId());
                         float * p1 = ob1.getPtr<float>();
                         float * p2 = ob2.getPtr<float>();
                         float * out = outOb.getPtr<float>();
@@ -173,9 +212,9 @@ namespace gradylib {
                     }
                 }
                 void operator()(ElementwiseOperator const & v) {
-                    float * out = outputBuffers.at(e->getId()).getPtr<float>();
+                    float * out = evaluator.outputBuffers.at(e->getId()).getPtr<float>();
                     Expr const & op1 = e->getOperands().front();
-                    OutputBuffer & opBuffer1 = outputBuffers.at(op1->getId());
+                    OutputBuffer & opBuffer1 = evaluator.outputBuffers.at(op1->getId());
                     int batch1 = opBuffer1.getBatchUseCount();
                     float * p1 = opBuffer1.getPtr<float>();
                     size_t numElements = product(e->getDimensions());
@@ -187,11 +226,11 @@ namespace gradylib {
                     }
                 }
                 void operator()(BinaryOperator const & v) {
-                    float * out = outputBuffers.at(e->getId()).getPtr<float>();
+                    float * out = evaluator.outputBuffers.at(e->getId()).getPtr<float>();
                     Expr const & op1 = e->getOperands().front();
                     Expr const & op2 = e->getOperands().back();
-                    OutputBuffer & opBuffer1 = outputBuffers.at(op1->getId());
-                    OutputBuffer & opBuffer2 = outputBuffers.at(op2->getId());
+                    OutputBuffer & opBuffer1 = evaluator.outputBuffers.at(op1->getId());
+                    OutputBuffer & opBuffer2 = evaluator.outputBuffers.at(op2->getId());
                     int batch1 = opBuffer1.getBatchUseCount();
                     int batch2 = opBuffer2.getBatchUseCount();
                     if (batch1 != batch2 && batch1 > 1 && batch2 > 1) {
@@ -217,13 +256,13 @@ namespace gradylib {
                     throw gradylibMakeException("Attempt to evaluate Undefined ExpressionType");
                 }
                 void operator()(Concatenate const & v) {
-                    float * out = outputBuffers.at(e->getId()).getPtr<float>();
+                    float * out = evaluator.outputBuffers.at(e->getId()).getPtr<float>();
                     std::vector<float*> ops;
                     std::vector<size_t> vectorSizes;
-                    int batchSize = outputBuffers.at(e->getOperands().front()->getId()).getBatchUseCount();
+                    int batchSize = evaluator.outputBuffers.at(e->getOperands().front()->getId()).getBatchUseCount();
                     int elementSizeBytes = sizeInBytes(e->getOperands().front()->getDataType());
                     for (Expr const & expr : e->getOperands()) {
-                        OutputBuffer & ob = outputBuffers.at(expr->getId());
+                        OutputBuffer & ob = evaluator.outputBuffers.at(expr->getId());
                         ops.push_back(ob.getPtr<float>());
                         vectorSizes.push_back(product(expr->getDimensions()));
                         if (batchSize != ob.getBatchUseCount()) {
@@ -260,7 +299,7 @@ namespace gradylib {
                 std::cout << "do the thing ";
                 std::visit(Print{}, e->getExpressionType());
                 std::cout << "\n";
-                std::visit(ComputeExpression{e}, e->getExpressionType());
+                std::visit(ComputeExpression{e, *this}, e->getExpressionType());
             }
 
             std::vector<void *> result() {

@@ -119,22 +119,10 @@ namespace gradylib {
             friend std::ostream & operator<<(std::ostream & os, OutputBuffer const & ob);
         };
 
-        std::ostream & operator<<(std::ostream & os, OutputBuffer const & ob) {
+        inline std::ostream & operator<<(std::ostream & os, OutputBuffer const & ob) {
             os << "ptr: " << ob.ptr << " ne: " << ob.numElements << " nb: " << ob.numBytes << " bs: " << ob.batchSize;
             return os;
         }
 
-        OpenHashMap<int, OutputBuffer> outputBuffers;
-        OpenHashMap<int, OutputBuffer> partialBuffers;
-
-        void * getPartialPtr(Tensor const & tensor) {
-            auto ob = partialBuffers.get(tensor.getExpression()->getId());
-            return ob.has_value() ? ob.value().getPtr<void>() : nullptr;
-        }
-
-        void * getOutputPtr(Tensor const & tensor) {
-            auto ob = outputBuffers.get(tensor.getExpression()->getId());
-            return ob.has_value() ? ob.value().getPtr<void>() : nullptr;
-        }
     }
 }

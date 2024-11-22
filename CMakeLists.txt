@@ -73,7 +73,8 @@ add_executable(allTests ${SRC} ${TEST_SRC})
 target_link_libraries(allTests PRIVATE Catch2 Catch2Main)
 
 set(NN_SRC
-        src/gradylib/nn4/BufferAllocator.hpp
+        src/gradylib/nn4/activation/Scalarati.hpp
+        src/gradylib/nn4/activation/Tensorati.hpp
         src/gradylib/nn4/DataType.hpp
         src/gradylib/nn4/DataTypeDeriver.hpp
         src/gradylib/nn4/Evaluator.hpp
@@ -88,6 +89,7 @@ set(NN_SRC
 
 set(NN_TEST_SRC
         src/test/nn/TestMLP.cpp
+        src/test/nn/TestScalar.cpp
 )
 
 add_executable(nnTests ${SRC} ${NN_SRC} ${NN_TEST_SRC})
@@ -104,3 +106,6 @@ add_executable(multipleInheritanceOfTemplate ${SRC} src/experiment/MultipleInher
 
 add_executable(tensor ${SRC} src/gradylib/nn4/Tensor.cpp)
 target_link_libraries(tensor ${EXTRA_LFLAGS})
+
+add_executable(tensorInput ${SRC} src/gradylib/nn4/TensorInput.cpp)
+target_link_libraries(tensorInput ${EXTRA_LFLAGS})

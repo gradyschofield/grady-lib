@@ -1,20 +1,14 @@
-Do the following in this order:
-- OpenHashSet
-- Testing
-- Improve constructors
-- Exception correctness
-- Iterator compatibility/what can you do to make the Maps and Sets closer to being drop-in replacements for unordered_map/unordered_set
-- Improve requires clauses, is is_convertible_to really what you want?
-- Use optionals or throw, remove print&exit error behavior
+Make the OpenHashMap and other types (where applicable) work with non-default construtible types
 
-template all the methods that take keys use convertible_to in requires
-MMapI2HRSOpenHashMap
-    - copy/move constructors/assignments
-Constructors on everything that take growth/load factor arguments
-Create OpenHashSet from OpenHashMap
-Fix exception correctness throughout
-Remove the exits and return optionals or throw exceptions
-Implement COW for mmap'd OpenHashSetTC
-Implement COW for mmap'd OpenHashMapTC
-Implement clone in MMapI2sOpenHashMap
-Implement clone in MMapS2IOpenHashMap
+Make initializer lists work with OpenHashMap and OpenHashSet
+
+What more can you do to make OpenHashSet and OpenHashMap drop-in replacements for unordered_set/map
+
+Is any of the following still relevant?
+    MMapI2HRSOpenHashMap
+        - copy/move constructors/assignments
+    Constructors on everything that take growth/load factor arguments
+    Implement COW for mmap'd OpenHashSetTC
+    Implement COW for mmap'd OpenHashMapTC
+    Implement clone in MMapI2sOpenHashMap
+    Implement clone in MMapS2IOpenHashMap

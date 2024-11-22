@@ -75,6 +75,8 @@ namespace gradylib {
                 return ret;
             }
 
+            Tensor() = default;
+
             template<typename... Sizes>
             requires (std::is_integral_v<Sizes> && ...)
             Tensor(DataType dataType, Sizes... sizes)

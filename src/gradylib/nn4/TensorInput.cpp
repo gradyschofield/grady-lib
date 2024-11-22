@@ -1,3 +1,6 @@
+//
+// Created by Grady Schofield on 11/15/24.
+//
 #include"gradylib/nn4/activation/Scalarati.hpp"
 #include"Evaluator.hpp"
 #include"Initializer.hpp"
@@ -17,7 +20,7 @@ int main(int argc, char ** argv) {
     };
 
     SliceList sliceList("in");
-    Tensor embedding(90, 120000);
+    Tensor embedding(64, 64);
     Tensor emb = embedding.aggregateSlices(sliceList);
     auto l1_1 = relu(addPerceptron(64, emb));
     auto l2_1 = relu(addPerceptron(32, l1_1));
@@ -47,9 +50,7 @@ int main(int argc, char ** argv) {
     }
     trainer.train({1, 0, 1, 1}, {
             {1,1,3,4},
-            {1,1,3,4},
-            {2,1,0,100},
-            {2,1,0,100}
+            {1,1,3,4}
     });
 
 

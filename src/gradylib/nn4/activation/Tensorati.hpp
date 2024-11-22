@@ -24,17 +24,10 @@ SOFTWARE.
 
 #pragma once
 
-#include<cstddef>
-#include<vector>
-
 namespace gradylib {
     namespace nn {
-        inline size_t product(std::vector<int> const & v) {
-            size_t ret = 1;
-            for (int i : v) {
-                ret *= i;
-            }
-            return ret;
+        namespace activation {
+
         }
     }
 }
