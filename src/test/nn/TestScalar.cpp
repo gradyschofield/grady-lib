@@ -35,3 +35,30 @@ TEST_CASE("Basic factor") {
     //REQUIRE(z == z2);
     //cout << z.derivative() << "\n";
 }
+
+TEST_CASE("Basic expand") {
+    using namespace gradylib::nn::activation;
+    auto z = x * (x + h);
+    z.expand();
+    auto z3 = x * h + h * x;
+    //REQUIRE(z == z2);
+    //cout << z.derivative() << "\n";
+}
+
+TEST_CASE("Expand exercising postfix design") {
+    using namespace gradylib::nn::activation;
+    auto z = x[1] * x[2] * x[3] * (x[4] + x[5]);
+    z.expand();
+    auto z3 = x * h + h * x;
+    //REQUIRE(z == z2);
+    //cout << z.derivative() << "\n";
+}
+
+TEST_CASE("Expand exercising call on newly created multiplies") {
+    using namespace gradylib::nn::activation;
+    auto z = (x[1] + x[2]) * (x[3] + x[4]);
+    z.expand();
+    auto z3 = x * h + h * x;
+    //REQUIRE(z == z2);
+    //cout << z.derivative() << "\n";
+}

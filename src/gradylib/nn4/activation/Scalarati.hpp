@@ -43,13 +43,42 @@ namespace gradylib {
                 std::string name;
                 std::vector<int> index;
             public:
+                Terminal() = default;
+                Terminal(std::string name) : name(name) {}
+
+                template<typename... Indexes>
+                requires (std::is_integral_v<Indexes> && ...)
+                Terminal(std::string name, Indexes... indexes)
+                    : name(name), index{indexes...}
+                {
+                }
+
                 bool operator==(Terminal const & t) const { return true; };
+
+                std::string const & getName() const {
+                    return name;
+                }
             };
+
             class Displacement{
                 std::string name;
                 std::vector<int> index;
             public:
+                Displacement() = default;
+                Displacement(std::string name) : name(name) {}
+
+                template<typename... Indexes>
+                requires (std::is_integral_v<Indexes> && ...)
+                Displacement(std::string name, Indexes... indexes)
+                    : name(name), index{indexes...}
+                {
+                }
+
                 bool operator==(Displacement const & t) const { return true; };
+
+                std::string const & getName() const {
+                    return name;
+                }
             };
             class Negate{};
             class Value{
@@ -320,6 +349,43 @@ namespace gradylib {
                     }
                 }
 
+                bool expandRecurse(ScalarPtr & parent, ScalarPtr & current, ScalarPtr & parentsOtherOperand) {
+                    if (current->getOperands().size() == 2) {
+                        bool expanded = expandRecurse(current, current->getOperands().front(), current->getOperands().back());
+                        if (!expanded) {
+                            expandRecurse(current, current->getOperands().back(), current->getOperands().front());
+                        }
+                    } else {
+                        ScalarPtr null(nullptr);
+                        for (ScalarPtr & op : current->getOperands()) {
+                            expandRecurse(current, op, null);
+                        }
+                    }
+                    if (parent &&
+                        std::holds_alternative<Multiply>(parent->getOperation()) &&
+                        (std::holds_alternative<Add>(current->getOperation()) ||
+                         std::holds_alternative<Subtract>(current->getOperation())) ) {
+
+                        auto & leftOp = current->getOperands().front();
+                        auto & rightOp = current->getOperands().back();
+                        auto newMul1 = std::make_shared<Scalar>(Multiply{}, parentsOtherOperand, leftOp);
+                        auto newMul2 = std::make_shared<Scalar>(Multiply{}, parentsOtherOperand, rightOp);
+                        leftOp = newMul1;
+                        rightOp = newMul2;
+                        parent = current;
+                        bool expanded = expandRecurse(newMul1, newMul1->getOperands().front(), newMul1->getOperands().back());
+                        if (!expanded) {
+                            expandRecurse(newMul1, newMul1->getOperands().back(), newMul1->getOperands().front());
+                        }
+                        expanded = expandRecurse(newMul2, newMul2->getOperands().front(), newMul2->getOperands().back());
+                        if (!expanded) {
+                            expandRecurse(newMul2, newMul2->getOperands().back(), newMul2->getOperands().front());
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+
             public:
                 Intermediate() : scalarPtr(std::make_shared<Scalar>(Terminal{})) { }
                 Intermediate(ScalarPtr s) : scalarPtr(s) {}
@@ -350,6 +416,28 @@ namespace gradylib {
                 void simplify() {
                     auto head = std::make_shared<Scalar>(Displacement{});
                     factor(head, scalarPtr);
+                }
+
+                void expand() {
+                    ScalarPtr null(nullptr);
+                    expandRecurse(null, scalarPtr, null);
+                }
+
+                template<typename... Indexes>
+                requires (std::is_integral_v<Indexes> && ...)
+                Intermediate operator[](Indexes... indexes) {
+                    if (!std::holds_alternative<Terminal>(scalarPtr->getOperation()) &&
+                            !std::holds_alternative<Displacement>(scalarPtr->getOperation())) {
+                        throw gradylibMakeException("Can only set indices for Terminals and Displacements");
+                    }
+                    if (std::holds_alternative<Terminal>(scalarPtr->getOperation()) ){
+                        auto & t = std::get<Terminal>(scalarPtr->getOperation());
+                        return  std::make_shared<Scalar>(Terminal{t.getName(), indexes...});
+                    }
+                    if (std::holds_alternative<Displacement>(scalarPtr->getOperation()) ){
+                        auto & t = std::get<Displacement>(scalarPtr->getOperation());
+                        return  std::make_shared<Scalar>(Displacement{t.getName(), indexes...});
+                    }
                 }
             };
 
