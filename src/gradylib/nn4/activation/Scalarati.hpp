@@ -27,6 +27,7 @@ SOFTWARE.
 #include<iostream>
 #include<list>
 #include<string>
+#include<unordered_set>
 #include<variant>
 #include<vector>
 
@@ -53,7 +54,7 @@ namespace gradylib {
                 {
                 }
 
-                bool operator==(Terminal const & t) const { return true; };
+                bool operator==(Terminal const & t) const { return name == t.name && index == t.index; };
 
                 std::string const & getName() const {
                     return name;
@@ -74,7 +75,7 @@ namespace gradylib {
                 {
                 }
 
-                bool operator==(Displacement const & t) const { return true; };
+                bool operator==(Displacement const & t) const { return name == t.name && index == t.index; };
 
                 std::string const & getName() const {
                     return name;
@@ -88,7 +89,7 @@ namespace gradylib {
                 double getValue() const {
                     return x;
                 }
-                bool operator==(Value const & t) const { return true; };
+                bool operator==(Value const & t) const { return x == t.x; };
             };
             class Add{};
             class Divide{};
@@ -349,6 +350,63 @@ namespace gradylib {
                     }
                 }
 
+                template<typename... Ts>
+                static bool variantHasOneOf(ScalarPtr const & p) {
+                    return (std::holds_alternative<Ts>(p->getOperation()) || ...);
+                }
+
+                template<typename... Ts>
+                static int positionOfOneThatIs(ScalarPtr & p1, ScalarPtr & p2) {
+                    if ((std::holds_alternative<Ts>(p1->getOperation()) || ...)) {
+                        return 1;
+                    }
+                    return 2;
+                }
+
+                template<typename... Ts>
+                static ScalarPtr & oneThatIs(ScalarPtr & p1, ScalarPtr & p2) {
+                    if ((std::holds_alternative<Ts>(p1->getOperation()) || ...)) {
+                        return p1;
+                    }
+                    return p2;
+                }
+
+                template<typename... Ts>
+                static ScalarPtr & otherOf(ScalarPtr & p1, ScalarPtr & p2) {
+                    if ((std::holds_alternative<Ts>(p1->getOperation()) || ...)) {
+                        return p2;
+                    }
+                    return p1;
+                }
+
+                bool expandRecurse2(ScalarPtr & current) {
+                    auto fixUp = [](ScalarPtr & current) {
+                        if (variantHasOneOf<Multiply>(current) &&
+                            (variantHasOneOf<Add, Subtract>(current->getOperands().front()) ||
+                             variantHasOneOf<Add, Subtract>(current->getOperands().back()))) {
+                            int positionOfSumChild = positionOfOneThatIs<Add, Subtract>(current->getOperands().front(), current->getOperands().back());
+                            auto sumChild = oneThatIs<Add, Subtract>(current->getOperands().front(), current->getOperands().back());
+                            auto otherChild = otherOf<Add, Subtract>(current->getOperands().front(), current->getOperands().back());
+                            ScalarPtr newMul1, newMul2;
+                            if (positionOfSumChild == 1) {
+                                newMul1 = std::make_shared<Scalar>(Multiply{}, sumChild->getOperands().front(), otherChild);
+                                newMul2 = std::make_shared<Scalar>(Multiply{}, sumChild->getOperands().back(), otherChild);
+                            } else {
+                                newMul1 = std::make_shared<Scalar>(Multiply{}, otherChild, sumChild->getOperands().front());
+                                newMul2 = std::make_shared<Scalar>(Multiply{}, otherChild, sumChild->getOperands().back());
+                            }
+                            current = std::make_shared<Scalar>(sumChild->getOperation(), newMul1, newMul2);
+                            return true;
+                        }
+                        return false;
+                    };
+                    bool didFixup = fixUp(current);
+                    for (ScalarPtr & op : current->getOperands()) {
+                        didFixup = didFixup || expandRecurse2(op);
+                    }
+                    return didFixup;
+                }
+
                 bool expandRecurse(ScalarPtr & parent, ScalarPtr & current, ScalarPtr & parentsOtherOperand) {
                     if (current->getOperands().size() == 2) {
                         bool expanded = expandRecurse(current, current->getOperands().front(), current->getOperands().back());
@@ -420,7 +478,62 @@ namespace gradylib {
 
                 void expand() {
                     ScalarPtr null(nullptr);
-                    expandRecurse(null, scalarPtr, null);
+                    while (expandRecurse2(scalarPtr));
+                }
+
+                static void listTopLevelPolynomialTerms(ScalarPtr current, std::vector<std::vector<ScalarPtr>> & terms) {
+                    if (!variantHasOneOf<Terminal, Value, Displacement, Multiply, Add, Subtract>(current)) {
+                       throw gradylibMakeException("listTopLevelTerms");
+                    }
+                    if (!current->getOperands().empty()) {
+                        for (ScalarPtr & op : current->getOperands()) {
+                            if (variantHasOneOf<Add, Subtract>(current) && !variantHasOneOf<Add, Subtract>(op)) {
+                                terms.push_back({});
+                            }
+                            listTopLevelPolynomialTerms(op, terms);
+                        }
+                    } else {
+                        if (terms.empty()) {
+                            terms.push_back({});
+                        }
+                        terms.back().push_back(current);
+                    }
+                }
+
+                bool equalPolynomialTerms(Intermediate & z) {
+                    std::vector<std::vector<ScalarPtr>> terms1, terms2;
+                    listTopLevelPolynomialTerms(scalarPtr, terms1);
+                    listTopLevelPolynomialTerms(z.scalarPtr, terms2);
+                    if (terms1.size() != terms2.size()) return false;
+                    std::unordered_set<int> foundTerms;
+                    for (int i = 0; i < terms1.size(); ++i) {
+                        std::vector<ScalarPtr> const & t1 = terms1[i];
+                        bool found = false;
+                        for (int j = 0; j < terms2.size() && !found; ++j) {
+                            if (foundTerms.contains(j)) continue;
+                            std::vector<ScalarPtr> const & t2 = terms2[j];
+                            if (t1.size() != t2.size()) continue;
+                            std::unordered_set<int> foundFactors;
+                            for (int k = 0; k < t1.size(); ++k) {
+                                ScalarPtr const & f1 = t1[k];
+                                bool found2 = false;
+                                for (int m = 0; m < t1.size() && !found2; ++m) {
+                                    if (foundFactors.contains(m)) continue;
+                                    ScalarPtr const & f2 = t2[m];
+                                    if (f1->basicEquals(f2)) {
+                                        found2 = true;
+                                        foundFactors.insert(m);
+                                    }
+                                }
+                                if (!found2) break;
+                            }
+                            if (foundFactors.size() == t1.size()) {
+                                found = true;
+                            }
+                        }
+                        if (!found) return false;
+                    }
+                    return true;
                 }
 
                 template<typename... Indexes>

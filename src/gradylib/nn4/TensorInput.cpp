@@ -35,7 +35,7 @@ int main(int argc, char ** argv) {
     evaluator.in(sliceList, vector<int>{4, 5, 6, 7});
     float * pptr = static_cast<float*>(evaluator.getPartialPtr(emb));
     float * optr = static_cast<float*>(evaluator.getOutputPtr(emb));
-    float * optr1= static_cast<float*>(evaluator.getOutputPtr(l1_1));
+    float * optr1 = static_cast<float*>(evaluator.getOutputPtr(l1_1));
     float * optr2 = static_cast<float*>(evaluator.getOutputPtr(l2_1));
     float * outptr2 = static_cast<float*>(evaluator.getOutputPtr(out1));
     //evaluator.in("in", vector<int>{});

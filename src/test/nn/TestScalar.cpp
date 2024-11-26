@@ -27,13 +27,21 @@ TEST_CASE("Basic scalar derivative") {
     //cout << z.derivative() << "\n";
 }
 
+TEST_CASE("Basic derivative") {
+    using namespace gradylib::nn::activation;
+    auto z = x * x;
+    auto dz = z.derivative();
+    dz.simplify();
+    auto z3 = x * h * 2;
+    REQUIRE(dz.equalPolynomialTerms(z3));
+}
+
 TEST_CASE("Basic factor") {
     using namespace gradylib::nn::activation;
     auto z = x * h + h * x;
     z.simplify();
-    auto z3 = x * h + h * x;
-    //REQUIRE(z == z2);
-    //cout << z.derivative() << "\n";
+    auto z3 = x * h * 2;
+    REQUIRE(z.equalPolynomialTerms(z3));
 }
 
 TEST_CASE("Basic expand") {
@@ -49,7 +57,7 @@ TEST_CASE("Expand exercising postfix design") {
     using namespace gradylib::nn::activation;
     auto z = x[1] * x[2] * x[3] * (x[4] + x[5]);
     z.expand();
-    auto z3 = x * h + h * x;
+    auto z3 = x[1]*x[2]*x[3]*x[4] + x[1]*x[2]*x[3]*x[5];
     //REQUIRE(z == z2);
     //cout << z.derivative() << "\n";
 }
@@ -58,7 +66,33 @@ TEST_CASE("Expand exercising call on newly created multiplies") {
     using namespace gradylib::nn::activation;
     auto z = (x[1] + x[2]) * (x[3] + x[4]);
     z.expand();
-    auto z3 = x * h + h * x;
-    //REQUIRE(z == z2);
+    auto z3 = x[1]*x[3] + x[1]*x[4] + x[2]*x[3] + x[2]*x[4];
+    REQUIRE(z.equalPolynomialTerms(z3));
     //cout << z.derivative() << "\n";
+}
+
+TEST_CASE("Expand 3") {
+    using namespace gradylib::nn::activation;
+    auto z = (x[1] + x[2]) * (x[3] + x[4] * x[5] * x[6] * (x[7] + x[8] + x[9]));
+    z.expand();
+    auto z3 = x[1] * x[3] +
+            x[1] * x[4] * x[5] * x[6] * x[7] +
+            x[1] * x[4] * x[5] * x[6] * x[8] +
+            x[1] * x[4] * x[5] * x[6] * x[9] +
+            x[2] * x[3] +
+            x[2] * x[4] * x[5] * x[6] * x[7] +
+            x[2] * x[4] * x[5] * x[6] * x[8] +
+            x[2] * x[4] * x[5] * x[6] * x[9];
+    REQUIRE(z.equalPolynomialTerms(z3));
+}
+
+TEST_CASE("Expand 4") {
+    using namespace gradylib::nn::activation;
+    auto z = x[1] * (x[6] * (x[7] + x[8] + x[9]));
+    z.expand();
+    auto z3 =
+              x[1] * x[6] * x[7] +
+              x[1] * x[6] * x[8] +
+              x[1] * x[6] * x[9];
+    REQUIRE(z.equalPolynomialTerms(z3));
 }
