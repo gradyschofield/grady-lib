@@ -100,6 +100,21 @@ namespace gradylib {
 
             typedef std::variant<Displacement, Terminal, Negate, Add, Divide, Multiply, Subtract, Log, Exp, Value> IntermediateOperation;
 
+            struct Print {
+                std::ostream & ostr;
+                Print(std::ostream & ostr = std::cout) : ostr(ostr) {}
+                void operator()(Displacement const & x) { ostr << "h"; }
+                void operator()(Terminal const & x) { ostr << "x"; }
+                void operator()(Negate const & x) { ostr << "-"; }
+                void operator()(Add const & x) { ostr << "+"; }
+                void operator()(Divide const & x) { ostr << "/"; }
+                void operator()(Multiply const & x) { ostr << "*"; }
+                void operator()(Subtract const & x) { ostr << "-"; }
+                void operator()(Log const & x) { ostr << "log"; }
+                void operator()(Exp const & x) { ostr << "exp"; }
+                void operator()(Value const & x) { ostr << x.getValue(); }
+            };
+
             class Label {
             public:
                 LabelSpec operator=(double x) {
@@ -121,6 +136,11 @@ namespace gradylib {
                     (operands.push_back(ss), ...);
                 }
 
+                Scalar(IntermediateOperation e, std::vector<ScalarPtr> && operands)
+                    : expr(e), operands(std::move(operands))
+                {
+                }
+
                 IntermediateOperation const & getOperation() const {
                     return expr;
                 }
@@ -133,7 +153,15 @@ namespace gradylib {
                     return operands;
                 }
 
-                bool basicEquals(ScalarPtr const & p) {
+                ScalarPtr clone() {
+                    std::vector<ScalarPtr> newOperands;
+                    for (ScalarPtr const & p : operands) {
+                        newOperands.push_back(p->clone());
+                    }
+                    return std::make_shared<Scalar>(expr, std::move(newOperands));
+                }
+
+                bool basicEquals(ScalarPtr const & p) const {
                     if (p->getOperation().index() == getOperation().index()) {
                         if (std::holds_alternative<Terminal>(getOperation())) {
                             return std::get<Terminal>(getOperation()) == std::get<Terminal>(p->getOperation());
@@ -144,6 +172,14 @@ namespace gradylib {
                         }
                     }
                     return false;
+                }
+
+                bool equalsOne() const {
+                    return std::holds_alternative<Value>(getOperation()) && std::get<Value>(getOperation()).getValue() == 1;
+                }
+
+                bool equalsZero() const {
+                    return std::holds_alternative<Value>(getOperation()) && std::get<Value>(getOperation()).getValue() == 0;
                 }
             };
 
@@ -219,28 +255,36 @@ namespace gradylib {
                 ScalarPtr operator()(Multiply const & t) {
                     ScalarPtr op1 = operands[0];
                     ScalarPtr op2 = operands[1];
+                    ScalarPtr op1Clone = op1->clone();
+                    ScalarPtr op2Clone = op2->clone();
                     auto p1 = std::make_shared<Scalar>(Multiply{}, std::visit(IntermediateDerivativeVisitor{op1->getOperands()}, op1->getOperation()), op2);
-                    auto p2 = std::make_shared<Scalar>(Multiply{}, op1, std::visit(IntermediateDerivativeVisitor{op2->getOperands()}, op2->getOperation()));
+                    auto p2 = std::make_shared<Scalar>(Multiply{}, op1Clone, std::visit(IntermediateDerivativeVisitor{op2Clone->getOperands()}, op2Clone->getOperation()));
                     return std::make_shared<Scalar>(Add{}, p1, p2);
                 }
                 ScalarPtr operator()(Divide const & t) {
                     ScalarPtr op1 = operands[0];
                     ScalarPtr op2 = operands[1];
+                    ScalarPtr op1Clone = op1->clone();
+                    ScalarPtr op2Clone = op2->clone();
                     auto p1 = std::make_shared<Scalar>(Multiply{}, std::visit(IntermediateDerivativeVisitor{op1->getOperands()}, op1->getOperation()), op2);
-                    auto p2 = std::make_shared<Scalar>(Multiply{}, op1, std::visit(IntermediateDerivativeVisitor{op2->getOperands()}, op2->getOperation()));
+                    auto p2 = std::make_shared<Scalar>(Multiply{}, op1Clone, std::visit(IntermediateDerivativeVisitor{op2Clone->getOperands()}, op2Clone->getOperation()));
                     auto diff = std::make_shared<Scalar>(Subtract{}, p1, p2);
-                    auto denominator = std::make_shared<Scalar>(Multiply{}, op2, op2);
+                    ScalarPtr den1 = op2->clone();
+                    ScalarPtr den2 = op2->clone();
+                    auto denominator = std::make_shared<Scalar>(Multiply{}, den1, den2);
                     return std::make_shared<Scalar>(Divide{}, diff, denominator);
 
                 }
                 ScalarPtr operator()(Log const & t) {
                     ScalarPtr op = operands[0];
-                    ScalarPtr deriv = std::visit(IntermediateDerivativeVisitor{op->getOperands()}, op->getOperation());
+                    ScalarPtr c = op->clone();
+                    ScalarPtr deriv = std::visit(IntermediateDerivativeVisitor{c->getOperands()}, c->getOperation());
                     return std::make_shared<Scalar>(Divide{}, deriv, op);
                 }
                 ScalarPtr operator()(Exp const & t) {
                     ScalarPtr op = operands[0];
-                    ScalarPtr deriv = std::visit(IntermediateDerivativeVisitor{op->getOperands()}, op->getOperation());
+                    ScalarPtr c = op->clone();
+                    ScalarPtr deriv = std::visit(IntermediateDerivativeVisitor{c->getOperands()}, c->getOperation());
                     ScalarPtr expOp = std::make_shared<Scalar>(Exp{}, op);
                     return std::make_shared<Scalar>(Multiply{}, deriv, expOp);
                 }
@@ -303,9 +347,10 @@ namespace gradylib {
                     }
                 }
 
-                void factor(ScalarPtr & parent, ScalarPtr & current) {
+                bool factor(ScalarPtr & parent, ScalarPtr & current) {
+                    bool didFactor = false;
                     for (ScalarPtr & operand : current->getOperands()) {
-                        factor(current, operand);
+                        didFactor = didFactor || factor(current, operand);
                     }
                     if (std::holds_alternative<Add>(current->getOperation())) {
                         ScalarPtr & op1 = current->getOperands()[0];
@@ -325,6 +370,7 @@ namespace gradylib {
                                                              return x->basicEquals(lArg);
                                                          });
                                 if (iter != rightArgs.end()) {
+                                    didFactor = true;
                                     auto rArg = std::move(*iter);
                                     rightArgs.erase(iter);
                                     rollingProduct = std::make_shared<Scalar>(Multiply{}, lArg, rollingProduct);
@@ -348,6 +394,215 @@ namespace gradylib {
                         }
                         current = rollingProduct;
                     }
+                    return didFactor;
+                }
+
+                static std::vector<ScalarPtr> collectAddsAndSubtracts(ScalarPtr const & p) {
+                    std::vector<ScalarPtr> ret;
+                    auto recurse = [&ret](ScalarPtr const & p, auto && recurse) -> void {
+                        if (variantHasOneOf<Add, Subtract>(p)) {
+                            ret.push_back(p);
+                            for (ScalarPtr const &op: p->getOperands()) {
+                                recurse(op, recurse);
+                            }
+                        }
+                    };
+                    recurse(p, recurse);
+                    return ret;
+                }
+
+                static std::vector<ScalarPtr *> collectTermRoots(std::vector<ScalarPtr> const & adds) {
+                    std::vector<ScalarPtr *> ret;
+                    for (ScalarPtr const & p : adds) {
+                        if (!variantHasOneOf<Add, Subtract>(p->getOperands().front())) ret.push_back(&p->getOperands().front());
+                        if (!variantHasOneOf<Add, Subtract>(p->getOperands().back())) ret.push_back(&p->getOperands().back());
+                    }
+                    return ret;
+                }
+
+                static std::vector<std::vector<ScalarPtr>> collectFactorLists(std::vector<ScalarPtr*> const & termRoots) {
+                    auto recurse = [](std::vector<ScalarPtr> & ret, ScalarPtr const & p, auto && recurse) -> void {
+                        if (variantHasOneOf<Terminal, Displacement, Value>(p)) {
+                            ret.push_back(p);
+                        } else if (variantHasOneOf<Multiply>(p)) {
+                            recurse(ret, p->getOperands().front(), recurse);
+                            recurse(ret, p->getOperands().back(), recurse);
+                        }
+                    };
+                    std::vector<std::vector<ScalarPtr>> ret;
+                    for (ScalarPtr const * p : termRoots) {
+                        ret.push_back({});
+                        recurse(ret.back(), *p, recurse);
+                    }
+                    return ret;
+                }
+
+                ScalarPtr findCommonFactor(std::vector<std::vector<ScalarPtr>> const & factorLists) {
+                    for (ScalarPtr const & p : factorLists.front()) {
+                        bool found = true;
+                        for (int i = 1; i < factorLists.size(); ++i) {
+                            if (factorLists[i].end() == std::find_if(factorLists[i].begin(),
+                                                                     factorLists[i].end(),
+                                                                     [&p](ScalarPtr const & x) { return p->basicEquals(x); })) {
+                                found = false;
+                                break;
+                            }
+                        }
+                        if (found) {
+                            return p;
+                        }
+                    }
+                    return {nullptr};
+                }
+
+                static void removeFactor(ScalarPtr const & commonFactor, std::vector<ScalarPtr *> const & termRoots) {
+                    auto recurse = [&commonFactor](ScalarPtr & p, auto && recurse) -> bool {
+                        if (p->basicEquals(commonFactor)) {
+                            p = std::make_shared<Scalar>(Value{1});
+                            return true;
+                        } else if (variantHasOneOf<Multiply>(p)) {
+                            if (recurse(p->getOperands().front(), recurse)) {
+                                return true;
+                            }
+                            return recurse(p->getOperands().back(), recurse);
+                        }
+                        return false;
+                    };
+                    for (ScalarPtr * p : termRoots) {
+                        recurse(*p, recurse);
+                    }
+                }
+
+                static bool removeMultipliesByOne(std::vector<ScalarPtr *> const & termRoots) {
+                    auto getUnitFactor = [](ScalarPtr const & p) -> std::tuple<bool, ScalarPtr, ScalarPtr> {
+                        if (variantHasOneOf<Multiply>(p)) {
+                            if (p->getOperands().front()->equalsOne()) {
+                                return {true, p->getOperands().front(), p->getOperands().back()};
+                            }
+                            if (p->getOperands().back()->equalsOne()) {
+                                return {true, p->getOperands().back(), p->getOperands().front()};
+                            }
+                        }
+                        return {false, {nullptr}, {nullptr}};
+                    };
+                    auto recurse = [getUnitFactor](ScalarPtr & p, auto && recurse) -> bool {
+                        bool didRemove = false;
+                        if (variantHasOneOf<Multiply>(p)) {
+                            auto [hasUnitFactor, unitFactor, otherFactor] = getUnitFactor(p);
+                            if (hasUnitFactor) {
+                                p = otherFactor;
+                                didRemove = true;
+                            }
+                        }
+                        for (ScalarPtr & p : p->getOperands()) {
+                            didRemove = didRemove || recurse(p, recurse);
+                        }
+                        return didRemove;
+                    };
+                    bool didRemove = false;
+                    for (ScalarPtr * p : termRoots) {
+                        didRemove = didRemove || recurse(*p, recurse);
+                    }
+                    return didRemove;
+                }
+
+                static bool removeMultipliesByZero(std::vector<ScalarPtr *> const & termRoots) {
+                    auto isMultiplyByZero = [](ScalarPtr const & p) -> bool {
+                        if (variantHasOneOf<Multiply>(p)) {
+                            if (p->getOperands().front()->equalsZero()) {
+                                return true;
+                            }
+                            if (p->getOperands().back()->equalsZero()) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    };
+                    auto recurse = [isMultiplyByZero](ScalarPtr & p, auto && recurse) -> bool {
+                        bool didRemove = false;
+                        if (isMultiplyByZero(p)) {
+                            p = std::make_shared<Scalar>(Value{0});
+                        } else {
+                            for (ScalarPtr &p: p->getOperands()) {
+                                didRemove = didRemove || recurse(p, recurse);
+                            }
+                        }
+                        return didRemove;
+                    };
+                    bool didRemove = false;
+                    for (ScalarPtr * p : termRoots) {
+                        didRemove = didRemove || recurse(*p, recurse);
+                    }
+                    return didRemove;
+                }
+
+                static bool removeAddByZero(std::vector<ScalarPtr *> const & termRoots) {
+                    auto getZeroTerm = [](ScalarPtr const & p) -> std::tuple<bool, ScalarPtr, ScalarPtr> {
+                        if (variantHasOneOf<Add>(p)) {
+                            if (p->getOperands().front()->equalsZero()) {
+                                return {true, p->getOperands().front(), p->getOperands().back()};
+                            }
+                            if (p->getOperands().back()->equalsZero()) {
+                                return {true, p->getOperands().back(), p->getOperands().front()};
+                            }
+                        }
+                        return {false, {nullptr}, {nullptr}};
+                    };
+                    auto recurse = [getZeroTerm](ScalarPtr & p, auto && recurse) -> bool {
+                        bool didRemove = false;
+                        if (variantHasOneOf<Add>(p)) {
+                            auto [hasZeroTerm, zeroTerm, otherTerm] = getZeroTerm(p);
+                            if (hasZeroTerm) {
+                                p = otherTerm;
+                                didRemove = true;
+                            }
+                        }
+                        for (ScalarPtr & p : p->getOperands()) {
+                            didRemove = didRemove || recurse(p, recurse);
+                        }
+                        return didRemove;
+                    };
+                    bool didRemove = false;
+                    for (ScalarPtr * p : termRoots) {
+                        didRemove = didRemove || recurse(*p, recurse);
+                    }
+                    return didRemove;
+                }
+
+                bool factor2(ScalarPtr & current) {
+                    bool didFactor = false;
+                    auto isAllValues = [](std::vector<ScalarPtr *> const & termRoots) {
+                        for (ScalarPtr const * p : termRoots) {
+                            if (!std::holds_alternative<Value>((*p)->getOperation())) return false;
+                        }
+                        return true;
+                    };
+                    if (variantHasOneOf<Add, Subtract>(current)) {
+                        auto adds = collectAddsAndSubtracts(current);
+                        auto termRoots = collectTermRoots(adds);
+                        if (isAllValues(termRoots)) {
+                            // Compute the sum, replace the node and exit
+                            double x = 0;
+                            for (ScalarPtr const * p : termRoots) {
+                                x += std::get<Value>((*p)->getOperation()).getValue();
+                            }
+                            current = std::make_shared<Scalar>(Value{x});
+                            return false;
+                        }
+                        auto factorLists = collectFactorLists(termRoots);
+                        auto commonFactor = findCommonFactor(factorLists);
+                        if (commonFactor) {
+                            auto newMul = std::make_shared<Scalar>(Multiply{}, commonFactor, current);
+                            removeFactor(commonFactor, termRoots);
+                            while(removeMultipliesByOne(termRoots));
+                            current = newMul;
+                            didFactor = true;
+                        }
+                    }
+                    for (ScalarPtr & op : current->getOperands()) {
+                        didFactor = didFactor || factor2(op);
+                    }
+                    return didFactor;
                 }
 
                 template<typename... Ts>
@@ -468,17 +723,89 @@ namespace gradylib {
                 }
 
                 Intermediate derivative() {
-                    return Intermediate{std::visit(IntermediateDerivativeVisitor{scalarPtr->getOperands()}, scalarPtr->getOperation())};
+                    auto c = scalarPtr->clone();
+                    auto d = std::visit(IntermediateDerivativeVisitor{c->getOperands()}, c->getOperation());
+                    bool changed = false;
+                    do {
+                        changed = false;
+                        while (removeMultipliesByZero({&d})) changed = true;
+                        while (removeAddByZero({&d})) changed = true;
+                    } while(changed);
+                    return Intermediate{d};
                 }
 
                 void simplify() {
-                    auto head = std::make_shared<Scalar>(Displacement{});
-                    factor(head, scalarPtr);
+                    while (factor2(scalarPtr));
                 }
 
                 void expand() {
                     ScalarPtr null(nullptr);
                     while (expandRecurse2(scalarPtr));
+                }
+                /*
+                ┌─┴─┬─┐
+                   │
+                  */
+                void print() {
+                    struct TermPos{
+                        ScalarPtr ptr;
+                        TermPos * parent = nullptr;
+                        int pos = 0;
+                    };
+                    std::vector<std::vector<TermPos>> nodes;
+                    nodes.push_back({{scalarPtr, {nullptr}}});
+                    int printWidth = 7;
+                    size_t maxWidth = 0;
+                    while (true) {
+                        std::vector<TermPos> t;
+                        for (TermPos & tp : nodes.back()) {
+                            for (ScalarPtr const & op : tp.ptr->getOperands()) {
+                                t.push_back({op, &tp});
+                            }
+                        }
+                        std::cout << "width " << t.size() << "\n";
+                        maxWidth = std::max(maxWidth, t.size());
+                        if (!t.empty()) {
+                            nodes.push_back(std::move(t));
+                        } else {
+                            break;
+                        }
+                    }
+                    int fullLineWidth = maxWidth * printWidth;
+                    nodes.front().front().pos = fullLineWidth / 2 - printWidth/2;
+                    for (int i = 1; i < nodes.size(); ++i) {
+                        for (auto && [p, parent, pos] : nodes[i]) {
+                            int childRowSize = parent->ptr->getOperands().size() * printWidth;
+                            auto opIter = std::find(parent->ptr->getOperands().begin(), parent->ptr->getOperands().end(), p);
+                            int argNum = std::distance(parent->ptr->getOperands().begin(), opIter);
+                            pos = parent->pos - childRowSize / 2 + printWidth * argNum;
+                        }
+                    }
+                    for (auto && level : nodes) {
+                        int minPos = - std::min(0, level.front().pos);
+                        for (auto && [p, parent, pos] : level) {
+                            pos += minPos;
+                        }
+                        int lastPos = 0;
+                        for (auto && [p, parent, pos] : level) {
+                            pos = std::max(lastPos + printWidth, pos);
+                            lastPos = pos;
+                        }
+                        std::ostringstream  barStr;
+                        std::ostringstream ostr;
+                        for (auto && [p, parent, pos] : level) {
+                            int currPos = ostr.tellp();
+                            int pad = std::max(0, pos - currPos);
+                            int barPad = currPos + pad - barStr.tellp();
+                            barStr << std::setw(barPad) << "|";
+                            ostr << std::right << std::setw(pad);
+                            std::visit(Print{ostr}, p->getOperation());
+                            //ostr << ", (" << pos << ") ";
+                        }
+                        std::cout << barStr.str() << "\n";
+                        std::cout << ostr.str() << "\n";
+                    }
+                    std::cout << "Max width " << maxWidth << "\n";
                 }
 
                 static void listTopLevelPolynomialTerms(ScalarPtr current, std::vector<std::vector<ScalarPtr>> & terms) {
