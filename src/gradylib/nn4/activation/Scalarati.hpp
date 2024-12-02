@@ -97,8 +97,9 @@ namespace gradylib {
             class Subtract{};
             class Log{};
             class Exp{};
+            class Pow{};
 
-            typedef std::variant<Displacement, Terminal, Negate, Add, Divide, Multiply, Subtract, Log, Exp, Value> IntermediateOperation;
+            typedef std::variant<Displacement, Terminal, Negate, Add, Divide, Multiply, Subtract, Log, Exp, Pow, Value> IntermediateOperation;
 
             struct Print {
                 std::ostream & ostr;
@@ -112,6 +113,7 @@ namespace gradylib {
                 void operator()(Subtract const & x) { ostr << "-"; }
                 void operator()(Log const & x) { ostr << "log"; }
                 void operator()(Exp const & x) { ostr << "exp"; }
+                void operator()(Pow const & x) { ostr << "pow"; }
                 void operator()(Value const & x) { ostr << x.getValue(); }
             };
 
@@ -222,6 +224,9 @@ namespace gradylib {
                 Arg operator()(Exp const & t) {
                     return applyUnary([](Arg x) { return exp(x); });
                 }
+                Arg operator()(Pow const & t) {
+                    return applyBinary([](Arg x, Arg y) { return pow(x, y); });
+                }
                 Arg operator()(Value const & t) { return t.getValue(); }
             };
 
@@ -287,6 +292,29 @@ namespace gradylib {
                     ScalarPtr deriv = std::visit(IntermediateDerivativeVisitor{c->getOperands()}, c->getOperation());
                     ScalarPtr expOp = std::make_shared<Scalar>(Exp{}, op);
                     return std::make_shared<Scalar>(Multiply{}, deriv, expOp);
+                }
+                ScalarPtr operator()(Pow const & t) {
+                    // D(x^y) = (dx * y / x + dy * log(x)) x^y
+                    ScalarPtr term1;
+                    {
+                        ScalarPtr x = operands[0]->clone();
+                        ScalarPtr dx = std::visit(IntermediateDerivativeVisitor{operands[0]->getOperands()}, operands[0]->getOperation());
+                        ScalarPtr y = operands[1]->clone();
+                        ScalarPtr t1 = std::make_shared<Scalar>(Multiply{}, dx, y);
+                        ScalarPtr t2 = std::make_shared<Scalar>(Pow{}, x, std::make_shared<Scalar>(Value{-1}));
+                        term1 = std::make_shared<Scalar>(Multiply{}, t1, t2);
+                    }
+                    ScalarPtr term2;
+                    {
+                        ScalarPtr x = operands[0]->clone();
+                        ScalarPtr log_x = std::make_shared<Scalar>(Log{}, x);
+                        ScalarPtr dy = std::visit(IntermediateDerivativeVisitor{operands[1]->getOperands()}, operands[1]->getOperation());
+                        term2 = std::make_shared<Scalar>(Multiply{}, log_x, dy);
+
+                    }
+                    ScalarPtr factor = std::make_shared<Scalar>(Add{}, term1, term2);
+                    ScalarPtr power = std::make_shared<Scalar>(Pow{}, operands[0], operands[1]);
+                    return std::make_shared<Scalar>(Multiply{}, factor, power);
                 }
                 ScalarPtr  operator()(Value const & t) {
                     return std::make_shared<Scalar>(Value{0});
