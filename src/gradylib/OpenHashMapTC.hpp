@@ -584,6 +584,10 @@ namespace gradylib {
             return mapSize;
         }
 
+        bool empty() const {
+            return size() == 0;
+        }
+
         void clear() {
             if (readOnly) {
                 std::ostringstream sstr;
