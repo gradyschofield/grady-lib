@@ -91,7 +91,7 @@ namespace gradylib {
             size_t start = 0;
             size_t stop = 0;
             for (int i = 0; i < threads.size(); ++i) {
-                stop = start + count / threads.size() + (count % threads.size() < i ? 1 : 0);
+                stop = start + count / threads.size() + (i < count % threads.size() ? 1 : 0);
                 work.push([start, stop, f]() {
                     f(start, stop);
                 });
