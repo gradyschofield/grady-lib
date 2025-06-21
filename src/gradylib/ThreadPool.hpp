@@ -85,6 +85,22 @@ namespace gradylib {
             workerConditionVariable.notify_one();
         }
 
+        template<std::invocable<size_t,size_t> Invocable>
+        void allocateOverThreads(size_t count, Invocable && f) {
+            workMutex.lock();
+            size_t start = 0;
+            size_t stop = 0;
+            for (int i = 0; i < threads.size(); ++i) {
+                stop = start + count / threads.size() + (count % threads.size() < i ? 1 : 0);
+                work.push([start, stop, f]() {
+                    f(start, stop);
+                });
+                start = stop;
+            }
+            workMutex.unlock();
+            workerConditionVariable.notify_one();
+        }
+
         void wait() {
             std::unique_lock lock(workMutex);
             if (work.empty() && freeThreads.load(std::memory_order_relaxed) == threads.size()) {
