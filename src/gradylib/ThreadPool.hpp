@@ -68,13 +68,9 @@ namespace gradylib {
                             work.pop();
                             freeThreads.fetch_sub(1, std::memory_order_relaxed);
                             lock.unlock();
-                            std::cout << "thread " << i+1 << " got work" << std::endl;
                             f();
-                            std::cout << "thread " << i+1 << " finished work" << std::endl;
                             freeThreads.fetch_add(1, std::memory_order_relaxed);
                             waiterConditionVariable.notify_one();
-                        } else {
-                            //std::cout << "thread " << i+1 << " found no work" << std::endl;
                         }
                     }
                 });
