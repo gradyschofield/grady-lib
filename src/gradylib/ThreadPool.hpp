@@ -37,7 +37,7 @@ namespace gradylib {
     class ThreadPool {
         std::queue<std::function<void()>> work;
         std::vector<std::thread> threads;
-        std::mutex workMutex;
+        std::mutex mutable workMutex;
         std::condition_variable workerConditionVariable;
         std::condition_variable waiterConditionVariable;
         std::atomic<int> freeThreads{0};
@@ -53,7 +53,7 @@ namespace gradylib {
             : freeThreads(numThreads)
         {
             for (int i = 0; i < numThreads; ++i) {
-                threads.emplace_back([this]() {
+                threads.emplace_back([this, i]() {
                     while (true) {
                         std::unique_lock lock(workMutex);
                         workerConditionVariable.wait_for(lock, std::chrono::milliseconds(500), [this]{
@@ -68,13 +68,22 @@ namespace gradylib {
                             work.pop();
                             freeThreads.fetch_sub(1, std::memory_order_relaxed);
                             lock.unlock();
+                            std::cout << "thread " << i+1 << " got work" << std::endl;
                             f();
+                            std::cout << "thread " << i+1 << " finished work" << std::endl;
                             freeThreads.fetch_add(1, std::memory_order_relaxed);
                             waiterConditionVariable.notify_one();
+                        } else {
+                            //std::cout << "thread " << i+1 << " found no work" << std::endl;
                         }
                     }
                 });
             }
+        }
+
+        bool isEmpty() const {
+            std::unique_lock lock(workMutex);
+            return work.empty();
         }
 
         template<std::invocable Invocable>
