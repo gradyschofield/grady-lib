@@ -107,10 +107,10 @@ namespace gradylib {
         void insert(KeyType && key) {
             size_t hash = 0;
             size_t idx = 0;
+            size_t startIdx = 0;
             bool doesContain = false;
             size_t firstUnsetIdx = -1;
             bool isFirstUnsetIdxSet = false;
-            size_t startIdx = idx;
             if (keys.size() > 0) {
                 if constexpr (std::same_as<Key, std::string> && std::same_as<std::remove_cvref_t<KeyType>, std::string_view>) {
                     hash = HashFunction<std::string_view>{}(key);

@@ -311,13 +311,14 @@ namespace gradylib {
             }
             size_t hash = 0;
             size_t idx = 0;
+            size_t startIdx = 0;
             bool doesContain = false;
             size_t firstUnsetIdx = -1;
             bool isFirstUnsetIdxSet = false;
-            size_t startIdx = idx;
             if (keySize > 0) {
                 hash = hashFunction(key);
                 idx = hash % keySize;
+                startIdx = idx;
                 for (auto [isSet, wasSet] = setFlags[idx]; isSet || wasSet; std::tie(isSet, wasSet) = setFlags[idx]) {
                     if (!isFirstUnsetIdxSet && !isSet) {
                         firstUnsetIdx = idx;
