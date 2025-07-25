@@ -42,6 +42,7 @@ namespace gradylib {
         std::condition_variable waiterConditionVariable;
         std::atomic<int> freeThreads{0};
         std::atomic<bool> stop{false};
+        int workerSleepMillis;
 
     public:
 
@@ -49,14 +50,14 @@ namespace gradylib {
             return threads.size();
         }
 
-        ThreadPool(int numThreads = std::thread::hardware_concurrency())
-            : freeThreads(numThreads)
+        ThreadPool(int numThreads = std::thread::hardware_concurrency(), int workerSleepMillis = 500)
+            : freeThreads(numThreads), workerSleepMillis(workerSleepMillis)
         {
             for (int i = 0; i < numThreads; ++i) {
                 threads.emplace_back([this, i]() {
                     while (true) {
                         std::unique_lock lock(workMutex);
-                        workerConditionVariable.wait_for(lock, std::chrono::milliseconds(500), [this]{
+                        workerConditionVariable.wait_for(lock, std::chrono::milliseconds(ThreadPool::workerSleepMillis), [this]{
                             return !work.empty() || stop.load(std::memory_order_relaxed);
                         });
                         if (stop.load(std::memory_order_relaxed)) {
@@ -112,7 +113,7 @@ namespace gradylib {
                 return;
             }
             while (true) {
-                waiterConditionVariable.wait_for(lock, std::chrono::milliseconds(500), [this]{
+                waiterConditionVariable.wait_for(lock, std::chrono::milliseconds(workerSleepMillis), [this]{
                     return work.empty() && freeThreads.load(std::memory_order_relaxed) == threads.size();
                 });
                 if (work.empty() && freeThreads.load(std::memory_order_relaxed) == threads.size()) {
