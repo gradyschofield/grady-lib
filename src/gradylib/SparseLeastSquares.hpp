@@ -1,7 +1,6 @@
 #ifndef SPARSELEASTSQUARES_HPP
 #define SPARSELEASTSQUARES_HPP
 
-#include<numeric>
 #include<optional>
 
 #include"SparseMatrix.hpp"
@@ -15,58 +14,6 @@ namespace gradylib {
         std::optional<bool> verbose;
         //preconditioner
     };
-
-    namespace std_vector_operators {
-        inline double norm(std::vector<double> const & v) {
-            return sqrt(std::accumulate(v.begin(), v.end(), 0.0, [](double sum, double element){ return sum + element*element;}));
-        }
-
-        inline std::vector<double> normalize(std::vector<double> v) {
-            double n = 1.0 / norm(v);
-            for (double & t : v) t *= n;
-            return v;
-        }
-
-        inline std::vector<double> operator-(std::vector<double> const & x, std::vector<double> const & y) {
-            std::vector<double> ret(x.size());
-            for (auto [ret, x, y] : std::views::zip(ret, x, y)) {
-                ret = x - y;
-            }
-            return ret;
-        }
-
-        inline std::vector<double> operator+(std::vector<double> const & x, std::vector<double> const & y) {
-            std::vector<double> ret(x.size());
-            for (auto [ret, x, y] : std::views::zip(ret, x, y)) {
-                ret = x + y;
-            }
-            return ret;
-        }
-
-        inline std::vector<double> operator*(double a, std::vector<double> const & x) {
-            std::vector ret(x);
-            for (auto & t : ret) {
-                t *= a;
-            }
-            return ret;
-        }
-
-        inline double dot(std::vector<double> const & x, std::vector<double> const & y) {
-            double d = 0;
-            for (auto [x, y] : std::views::zip(x, y)) {
-                d += x*y;
-            }
-            return d;
-        }
-
-        inline std::vector<double> randomVector(uint32_t n) {
-            std::vector<double> ret(n);
-            double a = 1.0 / RAND_MAX;
-            for (double & t : ret) t = rand()*a;
-            return ret;
-        }
-    }
-
 
     inline std::vector<double> cgls(FixedSparseMatrix const & A, std::vector<double> const & b, cglsOptions opts = {}) {
         using namespace std_vector_operators;
