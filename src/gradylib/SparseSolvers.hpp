@@ -18,6 +18,9 @@ namespace gradylib {
         std::list<std::vector<double>>  x, v, w;
         std::list<double>  beta, gamma, sigma, alpha, resNorm;
         double eta;
+        if (!opts.tolerance.has_value()) {
+            opts.tolerance = 1E-12;
+        }
         if (!opts.maxIterations.has_value()) {
             opts.maxIterations = std::numeric_limits<uint64_t>::max();
         }
@@ -60,10 +63,10 @@ namespace gradylib {
             x.push_back(x.back() + gamma.back()*eta*w.back());
             resNorm.push_back(sigma.back() * resNorm.back());
             eta = -sigma.back() * eta;
-            if (opts.verbose.value()) {
-                std::cout << "computed residual norm: " << resNorm.back() << " true residual norm: " << norm(b-A*x.back()) << "\n";
-            }
             ++iter;
+            if (opts.verbose.value()) {
+                std::cout << "iter " << iter << " rel resnorm: " << resNorm.back() / bNorm << " computed residual norm: " << resNorm.back() << " true residual norm: " << norm(b-A*x.back()) << "\n";
+            }
         }
         return x.back();
     }

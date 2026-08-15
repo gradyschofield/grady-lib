@@ -4,6 +4,7 @@
 #include<list>
 #include<numeric>
 #include<sstream>
+#include<type_traits>
 #include<utility>
 #include<vector>
 #include<ranges>
@@ -11,7 +12,88 @@
 #include"OpenHashMapTC.hpp"
 
 namespace gradylib {
+    namespace file_utilities {
+        template<typename T>
+        static decltype(auto) tole(T i) {
+            if constexpr (std::endian::native == std::endian::big) {
+                return std::byteswap(i);
+            } else {
+                return i;
+            }
+        }
+
+        template<typename T>
+        static decltype(auto) fromle(T i) {
+            if constexpr (std::endian::native == std::endian::big) {
+                return std::byteswap(i);
+            } else {
+                return i;
+            }
+        }
+
+        template<typename Elem>
+        std::vector<Elem> vectorFromFile(std::filesystem::path path) {
+            if (!std::filesystem::exists(path)) {
+                return std::vector<Elem>{};
+            }
+            std::ifstream ifs(path);
+            auto readle = [&ifs]<typename T>(T & x) {
+                static_assert(std::is_trivially_copyable_v<T>);
+                ifs.read(reinterpret_cast<char *>(&x), sizeof(x));
+            };
+            auto readArray = [&ifs, &readle]<typename T>() {
+                uint64_t numElements;
+                readle(numElements);
+                size_t numBytes = sizeof(T) * numElements;
+                std::vector<T> ret(numElements);
+                size_t offset = 0;
+                constexpr auto maxArg = std::numeric_limits<std::streamsize>::max();
+                while (numBytes > maxArg) {
+                    ifs.read(reinterpret_cast<char *>(ret.data() + offset), maxArg);
+                    offset += maxArg;
+                    numBytes -= maxArg;
+                }
+                ifs.read(reinterpret_cast<char *>(ret.data() + offset), numBytes);
+                return ret;
+            };
+
+            return readArray.template operator()<Elem>();
+        }
+
+        template<typename Elem>
+        void toFile(std::vector<Elem> const & v, std::filesystem::path path) {
+            std::ofstream ofs(path, std::ios::binary);
+            auto writele = [&ofs]<typename T>(const T& x) {
+                static_assert(std::is_trivially_copyable_v<T>);
+                auto t = tole(x);
+                ofs.write(reinterpret_cast<char const *>(&t), sizeof(x));
+            };
+            auto writeArray = [&ofs, &writele](const auto& p, uint64_t numElements) {
+                using Tptr = std::remove_cvref_t<decltype(p)>;
+                static_assert(std::is_pointer_v<Tptr>);
+                using T = std::remove_pointer_t<Tptr>;
+                size_t numBytes = sizeof(T) * numElements;
+                writele(numElements);
+                constexpr auto maxArg = std::numeric_limits<std::streamsize>::max();
+                size_t offset = 0;
+                while (numBytes > maxArg) {
+                    ofs.write(reinterpret_cast<char const *>(p+offset), maxArg);
+                    offset += maxArg;
+                    numBytes -= maxArg;
+                }
+                ofs.write(reinterpret_cast<char const *>(p+offset), numBytes);
+            };
+
+            writeArray(v.data(), v.size());
+        }
+
+    }
+
     namespace std_vector_operators {
+        inline void zero(std::vector<double> & v) {
+            memset(v.data(), 0, sizeof(double) * v.size());
+        }
+
         inline double norm(std::vector<double> const & v) {
             return sqrt(std::accumulate(v.begin(), v.end(), 0.0, [](double sum, double element){ return sum + element*element;}));
         }
@@ -61,6 +143,21 @@ namespace gradylib {
                 d += x*y;
             }
             return d;
+        }
+
+        template<template<typename...> typename Container>
+        std::vector<double> orth(std::vector<double> w, Container<std::vector<double>> const & V) {
+            double n1 = norm(w);
+            for (auto & v : V) {
+                double d = dot(w, v);
+                for (size_t i = 0; i < w.size(); ++i) {
+                    w[i] -= d*v[i];
+                }
+            }
+            if (norm(w) < n1/2) {
+                return orth(w, V);
+            }
+            return normalize(w);
         }
 
         inline std::vector<double> randomVector(uint32_t n) {
@@ -126,7 +223,7 @@ namespace gradylib {
     class FixedSparseMatrix {
         std::vector<std::vector<double>> rows;
         std::vector<std::vector<uint32_t>> columnIndexes;
-        uint32_t _numColumns;
+        uint32_t _numColumns = 0;
 
         // This is just a helper to get around FreeSparseMatrix being incomplete at this point
         template<typename T>
@@ -141,22 +238,19 @@ namespace gradylib {
         }
 
     public:
-        FixedSparseMatrix() {
-        }
+        FixedSparseMatrix() = default;
+        FixedSparseMatrix(FixedSparseMatrix const & m) = default;
+        FixedSparseMatrix(FixedSparseMatrix && m) = default;
 
-        FixedSparseMatrix(FixedSparseMatrix const & m)
-            : rows(m.rows), columnIndexes(m.columnIndexes), _numColumns(m._numColumns)
+        FixedSparseMatrix(std::vector<std::vector<double>> && rows, std::vector<std::vector<uint32_t>> && columnIndexes, uint32_t numColumns)
+            : rows(std::move(rows)), columnIndexes(std::move(columnIndexes)), _numColumns(numColumns)
         {
         }
 
-        FixedSparseMatrix(FixedSparseMatrix && m)
-            : rows(move(m.rows)), columnIndexes(move(m.columnIndexes)), _numColumns(m._numColumns)
-        {
-        }
 
-        FixedSparseMatrix & operator=(FixedSparseMatrix && m) {
-            rows = move(m.rows);
-            columnIndexes = move(m.columnIndexes);
+        FixedSparseMatrix & operator=(FixedSparseMatrix && m) noexcept {
+            rows = std::move(m.rows);
+            columnIndexes = std::move(m.columnIndexes);
             _numColumns = m._numColumns;
             return *this;
         }
@@ -215,6 +309,92 @@ namespace gradylib {
                 }
             }
             return ret;
+        }
+
+        static FixedSparseMatrix fromFile(std::ifstream & ifs) {
+            using namespace file_utilities;
+            auto readle = [&ifs]<typename T>(T & x) {
+                static_assert(std::is_trivially_copyable_v<T>);
+                ifs.read(reinterpret_cast<char *>(&x), sizeof(x));
+                x = fromle(x);
+            };
+            auto readArray = [&ifs, &readle]<typename T>() {
+                uint64_t numElements;
+                readle(numElements);
+                size_t numBytes = sizeof(T) * numElements;
+                std::vector<T> ret(numElements);
+                size_t offset = 0;
+                constexpr auto maxArg = std::numeric_limits<std::streamsize>::max();
+                while (numBytes > maxArg) {
+                    ifs.read(reinterpret_cast<char *>(ret.data() + offset), maxArg);
+                    offset += maxArg;
+                    numBytes -= maxArg;
+                }
+                ifs.read(reinterpret_cast<char *>(ret.data() + offset), numBytes);
+                return ret;
+            };
+
+            size_t numRows;
+            uint32_t numColumns;
+            readle(numRows);
+            readle(numColumns);
+            std::vector<std::vector<double>> rows;
+            rows.resize(numRows);
+            for (size_t i = 0; i < numRows; ++i) {
+                rows[i] = readArray.operator()<double>();
+            }
+            std::vector<std::vector<uint32_t>> columnIndexes;
+            columnIndexes.resize(numRows);
+            for (size_t i = 0; i < numRows; ++i) {
+                columnIndexes[i] = readArray.operator()<uint32_t>();
+            }
+            return FixedSparseMatrix{std::move(rows), std::move(columnIndexes), numColumns};
+        }
+
+        static FixedSparseMatrix fromFile(std::filesystem::path filename) {
+            if (!std::filesystem::exists(filename)) {
+                return FixedSparseMatrix{};
+            }
+            std::ifstream ifs(filename, std::ios::binary);
+            return fromFile(ifs);
+        }
+
+        void toFile(std::ofstream & ofs) const {
+            using namespace file_utilities;
+            auto writele = [&ofs]<typename T>(const T& x) {
+                static_assert(std::is_trivially_copyable_v<T>);
+                auto t = tole(x);
+                ofs.write(reinterpret_cast<char const *>(&t), sizeof(x));
+            };
+            auto writeArray = [&ofs, &writele](const auto& p, uint64_t numElements) {
+                using Tptr = std::remove_cvref_t<decltype(p)>;
+                static_assert(std::is_pointer_v<Tptr>);
+                using T = std::remove_pointer_t<Tptr>;
+                size_t numBytes = sizeof(T) * numElements;
+                writele(numElements);
+                constexpr auto maxArg = std::numeric_limits<std::streamsize>::max();
+                size_t offset = 0;
+                while (numBytes > maxArg) {
+                    ofs.write(reinterpret_cast<char const *>(p+offset), maxArg);
+                    offset += maxArg;
+                    numBytes -= maxArg;
+                }
+                ofs.write(reinterpret_cast<char const *>(p+offset), numBytes);
+            };
+
+            writele(rows.size());
+            writele(_numColumns);
+            for (auto && r : rows) {
+                writeArray(r.data(), r.size());
+            }
+            for (auto && ci : columnIndexes) {
+                writeArray(ci.data(), ci.size());
+            }
+        }
+
+        void toFile(std::filesystem::path filename) const {
+            std::ofstream ofs(filename, std::ios::binary);
+            toFile(ofs);
         }
 
         class iterator {
