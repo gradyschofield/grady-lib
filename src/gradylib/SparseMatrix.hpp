@@ -1,6 +1,7 @@
 #ifndef SPARSEMATRIX_HPP
 #define SPARSEMATRIX_HPP
 
+#include<cassert>
 #include<list>
 #include<numeric>
 #include<sstream>
@@ -10,6 +11,7 @@
 #include<ranges>
 
 #include"OpenHashMapTC.hpp"
+#include "SparseMatrix.hpp"
 
 namespace gradylib {
     namespace file_utilities {
@@ -124,6 +126,15 @@ namespace gradylib {
             std::vector ret(x);
             for (auto & t : ret) {
                 t *= a;
+            }
+            return ret;
+        }
+
+        inline std::vector<double> operator*(std::vector<double> const & x, std::vector<double> const & y) {
+            assert(x.size() <= y.size());
+            std::vector ret(x);
+            for (size_t i = 0; i < x.size(); ++i) {
+                ret[i] *= y[i];
             }
             return ret;
         }
@@ -280,6 +291,167 @@ namespace gradylib {
             return columnIndexes.size();
         }
 
+        struct DiagonalAndArrow {
+            std::vector<double> D;
+            std::vector<double> g;
+            std::vector<double> Dinv;
+            double alpha;
+            size_t N;
+
+            DiagonalAndArrow(size_t N)
+                : D(N-1), g(N-1), N(N)
+            {
+            }
+
+            void makeIntoPreconditioner(double eps = 1E-4) {
+                using namespace gradylib::std_vector_operators;
+                for (double & x : D) {
+                    x = fabs(x);
+                    if (x == 0) {
+                        x = 1.0;
+                    }
+                }
+                Dinv = D;
+                for (double & x : Dinv) x = 1.0 / x;
+                double t = dot(g, Dinv*g);
+                double z = alpha - t;
+                if (z < 0) {
+                    alpha += -z + eps;
+                }
+            }
+
+            // The length of y can exceed N which aids in the use of this function in certain preconditioners
+            std::vector<double> inverse(std::vector<double> const & y) {
+                using namespace gradylib::std_vector_operators;
+                double gamma = y[N-1];
+                double beta = (gamma - dot(g, Dinv*y)) / (alpha - dot(g, Dinv*g));
+                std::vector<double> x(N);
+                x.back() = beta;
+                for (int i = 0; i < N-1; ++i) {
+                    x[i] = Dinv[i] * (y[i] - beta * g[i]);
+                }
+                return x;
+            }
+        };
+
+        DiagonalAndArrow getDiagonalAndArrow(int N) const {
+            DiagonalAndArrow ret(N);
+            for (int i = 0; i < N-1; ++i) {
+                std::vector<uint32_t> const & cIdxs = columnIndexes[i];
+                auto iter = std::lower_bound(cIdxs.begin(), cIdxs.end(), i);
+                if (iter == cIdxs.end() || *iter != i) {
+                    ret.D[i] = 0;
+                } else {
+                    auto idx = std::distance(cIdxs.begin(), iter);
+                    ret.D[i] = rows[i][idx];
+                }
+
+                iter = std::lower_bound(cIdxs.begin(), cIdxs.end(), N-1);
+                if (iter == cIdxs.end() || *iter != N-1) {
+                    ret.g[i] = 0;
+                } else {
+                    auto idx = std::distance(cIdxs.begin(), iter);
+                    ret.g[i] = rows[i][idx];
+                }
+            }
+            auto iter = std::lower_bound(columnIndexes[N-1].begin(), columnIndexes[N-1].end(), N-1);
+            if (iter == columnIndexes[N-1].end() || *iter != N-1) {
+                ret.alpha = 0;
+            } else {
+                auto idx = std::distance(columnIndexes[N-1].begin(), iter);
+                ret.alpha = rows[N-1][idx];
+            }
+            return ret;
+        }
+
+        FixedSparseMatrix submatrix(uint32_t i1, uint32_t j1, uint32_t i2, uint32_t j2) const {
+            std::vector<std::vector<double>> _rows(i2-i1);
+            std::vector<std::vector<uint32_t>> _columnIndexes(i2-i1);
+            for (int i = i1; i < i2; ++i) {
+                std::vector<uint32_t> const & cIdxs = columnIndexes[i];
+                auto iter1 = std::lower_bound(cIdxs.begin(), cIdxs.end(), j1);
+                auto iter2 = std::upper_bound(cIdxs.begin(), cIdxs.end(), j2);
+                auto count = distance(iter1, iter2);
+                auto offset = distance(cIdxs.begin(), iter1);
+                auto iter3 = rows[i].begin() + offset;
+                std::vector<double> vals;
+                std::vector<uint32_t> cols;
+                vals.reserve(count);
+                cols.reserve(count);
+                while (iter1 != iter2) {
+                    cols.push_back(*iter1-j1);
+                    vals.push_back(*iter3);
+                    ++iter1;
+                    ++iter3;
+                }
+                _rows[i-i1] = std::move(vals);
+                _columnIndexes[i-i1] = std::move(cols);
+            }
+            return FixedSparseMatrix{std::move(_rows), std::move(_columnIndexes), j2-j1};
+        }
+
+        void fillLowerTriangularRow(std::vector<uint32_t> & Ak_idx, std::vector<double> & Ak, uint32_t const i) const {
+            std::vector<uint32_t> const & cIdxs = columnIndexes[i];
+            std::vector<double> const & row = rows[i];
+            uint32_t k = 0;
+            while (cIdxs[k] < i) {
+                Ak_idx.push_back(cIdxs[k]);
+                Ak.push_back(row[k]);
+                ++k;
+            }
+        }
+
+        double operator()(uint32_t i, uint32_t j) const {
+            std::vector<uint32_t> const & cIdxs = columnIndexes[i];
+            auto iter = lower_bound(cIdxs.begin(), cIdxs.end(), j);
+            if (iter == cIdxs.end() || *iter != i) {
+                return 0;
+            }
+            auto idx = distance(cIdxs.begin(), iter);
+            return rows[i][idx];
+        }
+
+        std::vector<double> diagonal() const {
+            std::vector<double> diag(std::min(numRows(), numColumns()));
+            for (int i = 0; i < diag.size(); ++i) {
+                std::vector<uint32_t> const & cIdxs = columnIndexes[i];
+                auto iter = lower_bound(cIdxs.begin(), cIdxs.end(), i);
+                if (iter == cIdxs.end() || *iter != i) {
+                    diag[i] = 0;
+                } else {
+                    auto idx = distance(cIdxs.begin(), iter);
+                    diag[i] = rows[i][idx];
+                }
+            }
+            return diag;
+        }
+
+        double rowSquareSum(uint32_t i) const {
+            double s = 0;
+            for (double x : rows[i]) {
+                s += x*x;
+            }
+            return s;
+        }
+
+        double rowSquareSum(uint32_t i, std::vector<double> const & scale) const {
+            double s = 0;
+            for (int j = 0; j < rows[i].size(); ++j) {
+                s += rows[i][j] * rows[i][j] * scale[columnIndexes[i][j]];
+            }
+            return s;
+        }
+
+        uint32_t maxDistanceOffDiagonal() const {
+            uint32_t ret = 0;
+            for (int i = 0; i < numRows(); ++i) {
+                for (uint32_t col : columnIndexes[i]) {
+                    ret = std::max(ret, col > i ? col - i : i - col);
+                }
+            }
+            return ret;
+        }
+
         void fill(gradylib::OpenHashMapTC<MatrixCoordinate, double> const & elements) {
             auto fillElement = [this](uint32_t i, uint32_t j, double value) {
                 std::vector<uint32_t> const & cIdxs = columnIndexes[i];
@@ -395,6 +567,19 @@ namespace gradylib {
         void toFile(std::filesystem::path filename) const {
             std::ofstream ofs(filename, std::ios::binary);
             toFile(ofs);
+        }
+
+        void printToFile(std::ofstream & ofs) const {
+            for (uint32_t i = 0; i < rows.size(); ++i) {
+                for (auto && [j, el] : std::views::zip(columnIndexes[i], rows[i])) {
+                    ofs << i << " " << j << " " << el << "\n";
+                }
+            }
+        }
+
+        void printToFile(std::filesystem::path path) const {
+            std::ofstream ofs(path, std::ios::binary);
+            printToFile(ofs);
         }
 
         class iterator {
@@ -534,6 +719,41 @@ namespace gradylib {
             FixedSparseMatrix fsm(nonzeros);
             fsm.fill(elements);
             return fsm;
+        }
+
+        class const_iterator {
+            decltype(elements)::const_iterator iter;
+
+        public:
+            const_iterator(FreeSparseMatrix const * m)
+                : iter(m->elements.begin())
+            {
+            }
+
+            void operator++() {
+                ++iter;
+            }
+
+            std::tuple<uint32_t, uint32_t, double> operator*() const {
+                auto el = *iter;
+                return std::make_tuple(el.first.getI(), el.first.getJ(), el.second);
+            }
+
+            bool operator!=(const_iterator const & other) const {
+                return !this->operator==(other);
+            }
+
+            bool operator==(const_iterator const & other) const {
+                return this->iter == other.iter;
+            }
+        };
+
+        const_iterator begin() const {
+            return const_iterator{this};
+        }
+
+        const_iterator end() const {
+            return const_iterator{this};
         }
     };
 }
