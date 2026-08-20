@@ -50,7 +50,7 @@ namespace gradylib {
             return threads.size();
         }
 
-        ThreadPool(int numThreads = std::thread::hardware_concurrency(), int workerSleepMillis = 500)
+        ThreadPool(int numThreads = std::max(1U, std::thread::hardware_concurrency()), int workerSleepMillis = 500)
             : freeThreads(numThreads), workerSleepMillis(workerSleepMillis)
         {
             for (int i = 0; i < numThreads; ++i) {
@@ -85,26 +85,28 @@ namespace gradylib {
 
         template<std::invocable Invocable>
         void add(Invocable && f) {
-            workMutex.lock();
-            work.push(std::forward<Invocable>(f));
-            workMutex.unlock();
+            {
+                std::unique_lock lock(workMutex);
+                work.push(std::forward<Invocable>(f));
+            }
             workerConditionVariable.notify_one();
         }
 
         template<std::invocable<size_t,size_t> Invocable>
         void allocateOverThreads(size_t count, Invocable && f) {
-            workMutex.lock();
-            size_t start = 0;
-            size_t stop = 0;
-            for (int i = 0; i < threads.size(); ++i) {
-                stop = start + count / threads.size() + (i < count % threads.size() ? 1 : 0);
-                work.push([start, stop, f]() {
-                    f(start, stop);
-                });
-                start = stop;
+            {
+                std::unique_lock lock(workMutex);
+                size_t start = 0;
+                size_t stop = 0;
+                for (int i = 0; i < threads.size(); ++i) {
+                    stop = start + count / threads.size() + (i < count % threads.size() ? 1 : 0);
+                    work.push([start, stop, f]() {
+                        f(start, stop);
+                    });
+                    start = stop;
+                }
             }
-            workMutex.unlock();
-            workerConditionVariable.notify_one();
+            workerConditionVariable.notify_all();
         }
 
         void wait() {

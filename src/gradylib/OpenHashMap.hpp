@@ -440,6 +440,11 @@ namespace gradylib {
         }
 
         void clear() {
+            for (size_t i = 0; i < values.size(); ++i) {
+                if (setFlags.isSecondSet(i)) {
+                    values[i] = Value{};
+                }
+            }
             setFlags.clear();
             mapSize = 0;
         }
