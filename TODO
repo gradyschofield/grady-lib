@@ -1,9 +1,9 @@
+ChatGPT code review issues
 Do the following in this order:
-- OpenHashSet
-- Testing
-- Improve constructors
-- Exception correctness
 - Iterator compatibility/what can you do to make the Maps and Sets closer to being drop-in replacements for unordered_map/unordered_set
+  - vector v(set.begin(), set.end())
+- Improve constructors?
+- Exception correctness
 - Improve requires clauses, is is_convertible_to really what you want?
 - Use optionals or throw, remove print&exit error behavior
 

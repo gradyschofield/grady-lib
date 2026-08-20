@@ -88,6 +88,7 @@ namespace gradylib {
 
         BitPairSet(BitPairSet const &s) {
             size_t len = getUnderlyingLength(s.setSize);
+            delete [] underlying;
             underlying = new UnderlyingInt[len];
             memcpy(underlying, s.underlying, len * sizeof(UnderlyingInt));
             setSize = s.setSize;
@@ -122,6 +123,7 @@ namespace gradylib {
                 return *this;
             }
             size_t len = getUnderlyingLength(s.setSize);
+            delete [] underlying;
             underlying = new UnderlyingInt[len];
             memcpy(underlying, s.underlying, len * sizeof(UnderlyingInt));
             setSize = s.setSize;
@@ -129,12 +131,15 @@ namespace gradylib {
         }
 
         BitPairSet(BitPairSet &&s)
-                : underlying(s.underlying), setSize(s.setSize), readOnly(s.readOnly) {
+                : setSize(s.setSize), readOnly(s.readOnly) {
+            delete [] underlying;
+            underlying = s.underlying;
             s.underlying = nullptr;
             s.setSize = 0;
         }
 
         BitPairSet &operator=(BitPairSet &&s) noexcept {
+            delete [] underlying;
             underlying = s.underlying;
             setSize = s.setSize;
             readOnly = s.readOnly;
