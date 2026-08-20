@@ -11,7 +11,7 @@ add_library(gradylib::all ALIAS gradylib)
 
 set_target_properties(gradylib PROPERTIES EXPORT_NAME all)
 
-target_compile_features(gradylib INTERFACE cxx_std_20)
+target_compile_features(gradylib INTERFACE cxx_std_23)
 
 target_include_directories(gradylib
         INTERFACE
@@ -33,7 +33,6 @@ set(SRC
         src/gradylib/ThreadPool.hpp
         src/gradylib/ParallelTraversals.hpp
 )
-
 
 #=========================================================================================================
 # TESTS
@@ -82,20 +81,6 @@ if(BUILD_TESTING)
     catch_discover_tests(gradylib-tests)
 endif()
 
-
-#=========================================================================================================
-# EXPERIMENTAL PROGRAMS
-#=========================================================================================================
-
-option(GRADYLIB_BUILD_EXPERIMENTS "Build experiments" OFF)
-if (GRADYLIB_BUILD_EXPERIMENTS)
-    add_executable(testAlignment ${SRC} src/experiment/AlignmentStuff.cpp)
-    add_executable(perfectForwardStuff ${SRC} src/experiment/PerfectForwardStuff.cpp)
-    add_executable(testAltIntHash ${SRC} src/experiment/TestAltIntHash.cpp)
-    add_executable(testStringViewKeys ${SRC} src/experiment/TestStringViewKeys.cpp)
-    add_executable(replaceRegex src/experiment/ReplaceRegex.cpp)
-endif()
-
 #=========================================================================================================
 # INSTALLATION
 #=========================================================================================================
@@ -138,3 +123,17 @@ install(
         DESTINATION
         ${CMAKE_INSTALL_LIBDIR}/cmake/gradylib
 )
+
+#=========================================================================================================
+# EXPERIMENTAL PROGRAMS
+#=========================================================================================================
+
+option(GRADYLIB_BUILD_EXPERIMENTS "Build experiments" OFF)
+if (GRADYLIB_BUILD_EXPERIMENTS)
+    add_executable(testAlignment ${SRC} src/experiment/AlignmentStuff.cpp)
+    add_executable(perfectForwardStuff ${SRC} src/experiment/PerfectForwardStuff.cpp)
+    add_executable(testAltIntHash ${SRC} src/experiment/TestAltIntHash.cpp)
+    add_executable(testStringViewKeys ${SRC} src/experiment/TestStringViewKeys.cpp)
+    add_executable(replaceRegex src/experiment/ReplaceRegex.cpp)
+endif()
+

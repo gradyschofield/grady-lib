@@ -475,6 +475,17 @@ namespace gradylib {
             size_t idx;
             OpenHashMapTC *container;
         public:
+            using iterator_category = std::forward_iterator_tag;
+            using iterator_concept = std::forward_iterator_tag;
+            using difference_type = std::ptrdiff_t;
+            using value_type = std::pair<Key const, Value>;
+            using reference = std::pair<Key const &, Value &>;
+
+            iterator()
+                : idx(0), container(nullptr)
+            {
+            }
+
             iterator(size_t idx, OpenHashMapTC *container)
                     : idx(idx), container(container) {
             }
@@ -487,7 +498,7 @@ namespace gradylib {
                 return idx != other.idx || container != other.container;
             }
 
-            std::pair<Key const &, Value &> operator*() const {
+            reference operator*() const {
                 return {container->keys[idx], container->values[idx]};
             }
 
@@ -509,6 +520,12 @@ namespace gradylib {
                 }
                 return *this;
             }
+
+            iterator operator++(int) {
+                iterator i(*this);
+                operator++();
+                return i;
+            }
         };
 
         iterator begin() {
@@ -529,7 +546,19 @@ namespace gradylib {
         class const_iterator {
             size_t idx;
             OpenHashMapTC const *container;
+
         public:
+            using iterator_category = std::forward_iterator_tag;
+            using iterator_concept = std::forward_iterator_tag;
+            using difference_type = std::ptrdiff_t;
+            using value_type = std::pair<Key const, Value>;
+            using reference = std::pair<Key const &, Value const &>;
+
+            const_iterator()
+                : idx(0), container(nullptr)
+            {
+            }
+
             const_iterator(size_t idx, OpenHashMapTC const *container)
                     : idx(idx), container(container) {
             }
@@ -542,7 +571,7 @@ namespace gradylib {
                 return idx != other.idx || container != other.container;
             }
 
-            std::pair<Key const &, Value const &> operator*() const {
+            reference operator*() const {
                 return {container->keys[idx], container->values[idx]};
             }
 
@@ -563,6 +592,12 @@ namespace gradylib {
                     ++idx;
                 }
                 return *this;
+            }
+
+            const_iterator operator++(int) {
+                const_iterator i(*this);
+                operator++();
+                return i;
             }
         };
 

@@ -198,6 +198,16 @@ namespace gradylib {
             OpenHashMapTC<IndexType, IntermediateIndexType, HashFunction>::const_iterator iter;
             MMapI2HRSOpenHashMap const *container;
         public:
+            using iterator_category = std::forward_iterator_tag;
+            using iterator_concept = std::forward_iterator_tag;
+            using difference_type = std::ptrdiff_t;
+            using value_type = std::pair<IndexType const, std::string_view>;
+            using reference = std::pair<IndexType const &, std::string_view const>;
+
+            const_iterator()
+                : container(nullptr)
+            {
+            }
 
             const_iterator(OpenHashMapTC<IndexType, IntermediateIndexType, HashFunction>::const_iterator iter, MMapI2HRSOpenHashMap const * container)
                     : iter(iter), container(container) {
@@ -211,7 +221,7 @@ namespace gradylib {
                 return iter != other.iter || container != other.container;
             }
 
-            std::pair<IndexType, std::string_view> operator*() {
+            reference operator*() const {
                 return {iter.key(), container->at(iter.key())};
             }
 
@@ -229,6 +239,12 @@ namespace gradylib {
                 }
                 ++iter;
                 return *this;
+            }
+
+            const_iterator operator++(int) {
+                const_iterator i(*this);
+                operator++();
+                return i;
             }
         };
 

@@ -6,6 +6,7 @@
 
 #include<chrono>
 #include<filesystem>
+#include <map>
 #include<string>
 #include<unordered_map>
 #include<unordered_set>
@@ -16,11 +17,14 @@
 #include"gradylib/MMapI2SOpenHashMap.hpp"
 
 #include"TestCommon.hpp"
+#include "gradylib/MMapI2HRSOpenHashMap.hpp"
 
 using namespace std;
 namespace fs = std::filesystem;
 
 TEST_CASE("Open hash map") {
+    static_assert(std::forward_iterator<gradylib::MMapI2SOpenHashMap<int>::const_iterator>);
+    static_assert(std::forward_iterator<gradylib::MMapS2IOpenHashMap<int>::const_iterator>);
     auto randString = []() {
         int len = rand() % 12 + 3;
         vector<char> buffer(len);
@@ -863,3 +867,20 @@ TEST_CASE("OpenHashMap write") {
     }
     filesystem::remove(tmpFile);
 }
+
+TEST_CASE("OpenHashMap iterator constructing map"){
+    using gradylib::OpenHashMap;
+    static_assert(std::forward_iterator<OpenHashMap<int, int>::iterator>);
+    static_assert(std::forward_iterator<OpenHashMap<int, int>::const_iterator>);
+    OpenHashMap<int, int> s;
+    s[1] = 100;
+    s[3] = 300;
+    s[4] = 400;
+    s[1] = 101;
+    map<int, int> m(s.begin(), s.end());
+    REQUIRE(m.size() == 3);
+    REQUIRE(m[1] == 101);
+    REQUIRE(m[3] == 300);
+    REQUIRE(m[4] == 400);
+}
+

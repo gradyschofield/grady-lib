@@ -5,6 +5,7 @@
 #include<catch2/catch_test_macros.hpp>
 
 #include<iostream>
+#include<map>
 #include<unordered_map>
 
 #include"gradylib/OpenHashMapTC.hpp"
@@ -499,5 +500,20 @@ TEST_CASE("OpenHashMapTC ifstream constructor") {
     REQUIRE(m.at(2) == 6.92);
     REQUIRE(m.at(3) == -1.34E-7);
     filesystem::remove(tmpFile);
+}
+
+TEST_CASE("OpenHashMapTC iterator constructing map"){
+    static_assert(std::forward_iterator<OpenHashMapTC<int, int>::iterator>);
+    static_assert(std::forward_iterator<OpenHashMapTC<int, int>::const_iterator>);
+    OpenHashMapTC<int, int> s;
+    s[1] = 100;
+    s[3] = 300;
+    s[4] = 400;
+    s[1] = 101;
+    std::map<int, int> m(s.begin(), s.end());
+    REQUIRE(m.size() == 3);
+    REQUIRE(m[1] == 101);
+    REQUIRE(m[3] == 300);
+    REQUIRE(m[4] == 400);
 }
 

@@ -235,6 +235,17 @@ namespace gradylib {
             size_t idx;
             OpenHashSet *container;
         public:
+            using iterator_category = std::forward_iterator_tag;
+            using iterator_concept = std::forward_iterator_tag;
+            using difference_type = std::ptrdiff_t;
+            using value_type = Key const;
+            using reference = Key const &;
+
+            iterator()
+                : idx(0), container(nullptr)
+            {
+            }
+
             iterator(size_t idx, OpenHashSet *container)
                     : idx(idx), container(container) {
             }
@@ -247,7 +258,11 @@ namespace gradylib {
                 return idx != other.idx || container != other.container;
             }
 
-            Key const & operator*() {
+            reference operator*() {
+                return container->keys[idx];
+            }
+
+            reference operator*() const {
                 return container->keys[idx];
             }
 
@@ -264,6 +279,12 @@ namespace gradylib {
                     ++idx;
                 }
                 return *this;
+            }
+
+            iterator operator++(int) {
+                iterator i(*this);
+                operator++();
+                return i;
             }
         };
 
@@ -286,6 +307,17 @@ namespace gradylib {
             size_t idx;
             OpenHashSet const *container;
         public:
+            using iterator_category = std::forward_iterator_tag;
+            using iterator_concept = std::forward_iterator_tag;
+            using difference_type = std::ptrdiff_t;
+            using value_type = Key const;
+            using reference = Key const &;
+
+            const_iterator()
+                : idx(0), container(nullptr)
+            {
+            }
+
             const_iterator(size_t idx, OpenHashSet const *container)
                     : idx(idx), container(container) {
             }
@@ -298,7 +330,7 @@ namespace gradylib {
                 return idx != other.idx || container != other.container;
             }
 
-            Key const & operator*() const {
+            reference operator*() const {
                 return container->keys[idx];
             }
 
@@ -315,6 +347,12 @@ namespace gradylib {
                     ++idx;
                 }
                 return *this;
+            }
+
+            const_iterator operator++(int) {
+                const_iterator i(*this);
+                operator++();
+                return i;
             }
         };
 

@@ -111,6 +111,7 @@ TEST_CASE("MMapViewableOpenHashMap throws on empty map") {
 }
 
 TEST_CASE("MMapViewableOpenHashMap iterator") {
+    static_assert(std::forward_iterator<gradylib::MMapViewableOpenHashMap<int, vector<int>>::const_iterator>);
     fs::path tmpPath = filesystem::temp_directory_path();
     fs::path tmpFile = tmpPath / "map.bin";
     gradylib::MMapViewableOpenHashMap<int, vector<int>>::Builder builder;

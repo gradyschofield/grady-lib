@@ -407,3 +407,19 @@ TEST_CASE("OpenHashSetTC ifstream constructor"){
     fs::remove(tmpFile);
 }
 
+
+TEST_CASE("OpenHashSetTC iterator constructing vector"){
+    static_assert(std::forward_iterator<OpenHashSetTC<int>::const_iterator>);
+    OpenHashSetTC<int> s;
+    s.insert(4);
+    s.insert(4);
+    s.insert(3);
+    s.insert(999);
+    std::vector<int> v(s.begin(), s.end());
+    REQUIRE(v.size() == 3);
+    std::sort(v.begin(), v.end());
+    REQUIRE(v[0] == 3);
+    REQUIRE(v[1] == 4);
+    REQUIRE(v[2] == 999);
+}
+

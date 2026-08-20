@@ -4,6 +4,7 @@
 
 #include<catch2/catch_test_macros.hpp>
 
+#include<map>
 #include<string>
 #include<unordered_map>
 
@@ -86,11 +87,11 @@ TEST_CASE("Integer to highly redundant string open hash map") {
 
     startTime = chrono::high_resolution_clock::now();
     REQUIRE(m.size() == test.size());
-    for (auto & [key, str] : test) {
+    for (auto [key, str] : test) {
         REQUIRE(m.contains(key));
         REQUIRE(string(m.at(key)) == str);
     }
-    for (auto const & [key, str] : m) {
+    for (auto [key, str] : m) {
         REQUIRE(test.contains(key));
         REQUIRE(test.at(key) == string(str));
     }
@@ -143,3 +144,19 @@ TEST_CASE("MMapI2HRSOpenHashMap throw on mmap failure") {
     gradylib::GRADY_LIB_DEFAULT_MMapI2HRSOpenHashMap_MMAP<int>();
     fs::remove(tmpFile);
 }
+
+TEST_CASE("MMapI2HRSOpenHashMap iterator constructing map"){
+    static_assert(std::forward_iterator<MMapI2HRSOpenHashMap<int>::const_iterator>);
+    MMapI2HRSOpenHashMap<int>::Builder b;
+    b.put(1, "Hello!");
+    b.put(2, "How are you?");
+    fs::path tmpPath = filesystem::temp_directory_path();
+    fs::path tmpFile = tmpPath / "hrsmap2.bin";
+    b.write(tmpFile);
+    MMapI2HRSOpenHashMap<int> hrsMap(tmpFile);
+    map<int, string> m(hrsMap.begin(), hrsMap.end());
+    REQUIRE(m.size() == 2);
+    REQUIRE(m[1] == "Hello!");
+    REQUIRE(m[2] == "How are you?");
+}
+

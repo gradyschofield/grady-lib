@@ -232,6 +232,17 @@ namespace gradylib {
             size_t idx;
             MMapS2IOpenHashMap const * container;
         public:
+            using iterator_category = std::forward_iterator_tag;
+            using iterator_concept = std::forward_iterator_tag;
+            using difference_type = std::ptrdiff_t;
+            using value_type = std::pair<std::string_view const, IndexType>;
+            using reference = std::pair<std::string_view const, IndexType const>;
+
+            const_iterator()
+                : idx(0), container(nullptr)
+            {
+            }
+
             const_iterator(size_t idx, MMapS2IOpenHashMap const * container)
                     : idx(idx), container(container) {
             }
@@ -244,7 +255,7 @@ namespace gradylib {
                 return idx != other.idx || container != other.container;
             }
 
-            std::pair<std::string_view const, IndexType const &> operator*() const {
+            reference operator*() const {
                 std::byte const *keyPtr = static_cast<std::byte const *>(container->keys) + container->keyOffsets[idx];
                 return {container->getKey(keyPtr), container->values[idx]};
             }
@@ -267,6 +278,12 @@ namespace gradylib {
                     ++idx;
                 }
                 return *this;
+            }
+
+            const_iterator operator++(int) {
+                const_iterator i(*this);
+                operator++();
+                return i;
             }
         };
 
