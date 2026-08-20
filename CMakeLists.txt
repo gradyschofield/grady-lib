@@ -30,8 +30,10 @@ set(SRC
         src/gradylib/OpenHashMapTC.hpp
         src/gradylib/OpenHashSet.hpp
         src/gradylib/OpenHashSetTC.hpp
+        src/gradylib/SparseDirect.hpp
         src/gradylib/SparseLeastSquares.hpp
         src/gradylib/SparseMatrix.hpp
+        src/gradylib/SparseSolvers.hpp
         src/gradylib/ThreadPool.hpp
         src/gradylib/ParallelTraversals.hpp
 )
