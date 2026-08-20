@@ -1,22 +1,22 @@
 cmake_minimum_required(VERSION 3.28)
-project(grady_lib)
+project(gradylib
+        VERSION 0.1
+        LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 26)
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
-set(CMAKE_CXX_FLAGS_PROFILE "-O3 -pg -g")
-set(CMAKE_CXX_FLAGS_COVERAGE "-Og -g -fprofile-arcs -ftest-coverage")
-set(CMAKE_CXX_FLAGS_SANADDR "-O3 -g -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer")
+add_library(gradylib INTERFACE)
+add_library(gradylib::all ALIAS gradylib)
 
-include_directories(
-        src/
-        ../Catch2/src/
-        ../Catch2/release/generated-includes/
-)
+set_target_properties(gradylib PROPERTIES EXPORT_NAME all)
 
-link_directories(
-        ../Catch2/release/src/
+target_compile_features(gradylib INTERFACE cxx_std_20)
+
+target_include_directories(gradylib
+        INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        $<INSTALL_INTERFACE:include>
 )
 
 set(SRC
@@ -34,27 +34,107 @@ set(SRC
         src/gradylib/ParallelTraversals.hpp
 )
 
-add_executable(testAlignment ${SRC} src/experiment/AlignmentStuff.cpp)
-add_executable(perfectForwardStuff ${SRC} src/experiment/PerfectForwardStuff.cpp)
-add_executable(testAltIntHash ${SRC} src/experiment/TestAltIntHash.cpp)
 
-add_executable(testStringViewKeys ${SRC} src/experiment/TestStringViewKeys.cpp)
+#=========================================================================================================
+# TESTS
+#=========================================================================================================
 
-set(TEST_SRC
-        src/test/TestBitPairSet.cpp
-        src/test/TestCompletionPool.cpp
-        src/test/TestOpenHashMap.cpp
-        src/test/TestMMapViewableOpenHashMap.cpp
-        src/test/TestMMapI2HRSOpenHashMap.cpp
-        src/test/ThreadPoolTest.cpp
-        src/test/TestParallelTraversals.cpp
-        src/test/TestOpenHashMapTC.cpp
-        src/test/TestOpenHashMapTC2.cpp
-        src/test/TestOpenHashSet.cpp
-        src/test/TestOpenHashSetTC.cpp
+include(CTest)
+
+if(BUILD_TESTING)
+    find_package(Catch2 3 REQUIRED)
+
+    set(TEST_SRC
+            src/test/TestBitPairSet.cpp
+            src/test/TestCompletionPool.cpp
+            src/test/TestOpenHashMap.cpp
+            src/test/TestMMapViewableOpenHashMap.cpp
+            src/test/TestMMapI2HRSOpenHashMap.cpp
+            src/test/ThreadPoolTest.cpp
+            src/test/TestParallelTraversals.cpp
+            src/test/TestOpenHashMapTC.cpp
+            src/test/TestOpenHashMapTC2.cpp
+            src/test/TestOpenHashSet.cpp
+            src/test/TestOpenHashSetTC.cpp
+    )
+
+    add_executable(gradylib-tests ${TEST_SRC})
+    target_compile_options(gradylib-tests
+            PRIVATE
+            $<$<CONFIG:Profile>:-O3;-pg;-g>
+            $<$<CONFIG:Coverage>:-Og;-g;-fprofile-arcs;-ftest-coverage>
+            $<$<CONFIG:Sanaddr>:-O3;-g;-fsanitize=address;-fsanitize=undefined;-fno-omit-frame-pointer>
+    )
+    target_link_options(gradylib-tests
+            PRIVATE
+            $<$<CONFIG:Profile>:-pg>
+            $<$<CONFIG:Coverage>:-fprofile-arcs>
+            $<$<CONFIG:Sanaddr>:-fsanitize=address;-fsanitize=undefined>
+    )
+    target_link_libraries(
+            gradylib-tests
+            PRIVATE
+            gradylib::all
+            Catch2::Catch2WithMain
+    )
+
+    include(Catch)
+    catch_discover_tests(gradylib-tests)
+endif()
+
+
+#=========================================================================================================
+# EXPERIMENTAL PROGRAMS
+#=========================================================================================================
+
+option(GRADYLIB_BUILD_EXPERIMENTS "Build experiments" OFF)
+if (GRADYLIB_BUILD_EXPERIMENTS)
+    add_executable(testAlignment ${SRC} src/experiment/AlignmentStuff.cpp)
+    add_executable(perfectForwardStuff ${SRC} src/experiment/PerfectForwardStuff.cpp)
+    add_executable(testAltIntHash ${SRC} src/experiment/TestAltIntHash.cpp)
+    add_executable(testStringViewKeys ${SRC} src/experiment/TestStringViewKeys.cpp)
+    add_executable(replaceRegex src/experiment/ReplaceRegex.cpp)
+endif()
+
+#=========================================================================================================
+# INSTALLATION
+#=========================================================================================================
+
+install(
+        TARGETS gradylib
+        EXPORT gradylibTargets
 )
 
-add_executable(allTests ${SRC} ${TEST_SRC})
-target_link_libraries(allTests PRIVATE Catch2 Catch2Main)
+install(
+        DIRECTORY src/gradylib/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/gradylib
+        FILES_MATCHING PATTERN "*.hpp"
+)
 
-add_executable(replaceRegex src/experiment/ReplaceRegex.cpp)
+install(
+        EXPORT gradylibTargets
+        FILE gradylibTargets.cmake
+        NAMESPACE grady::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/gradylib
+)
+
+configure_package_config_file(
+        cmake/gradylibConfig.cmake.in
+        "${CMAKE_CURRENT_BINARY_DIR}/gradylibConfig.cmake"
+        INSTALL_DESTINATION
+        ${CMAKE_INSTALL_LIBDIR}/cmake/gradylib
+)
+
+write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/gradylibConfigVersion.cmake"
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+)
+
+install(
+        FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/gradylibConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/gradylibConfigVersion.cmake"
+        DESTINATION
+        ${CMAKE_INSTALL_LIBDIR}/cmake/gradylib
+)

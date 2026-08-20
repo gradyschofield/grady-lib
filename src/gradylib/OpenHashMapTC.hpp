@@ -595,6 +595,11 @@ namespace gradylib {
                 sstr << "Can't clear a readonly set";
                 throw gradylibMakeException(sstr.str());
             }
+            for (size_t i = 0; i < keySize; ++i) {
+                if (setFlags.isSecondSet(i)) {
+                    values[i] = Value{};
+                }
+            }
             setFlags.clear();
             mapSize = 0;
         }
