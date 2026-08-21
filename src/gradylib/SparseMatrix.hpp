@@ -391,6 +391,8 @@ namespace gradylib {
         }
 
         void fillLowerTriangularRow(std::vector<uint32_t> & Ak_idx, std::vector<double> & Ak, uint32_t const i) const {
+            Ak_idx.clear();
+            Ak.clear();
             std::vector<uint32_t> const & cIdxs = columnIndexes[i];
             std::vector<double> const & row = rows[i];
             uint32_t k = 0;
@@ -725,8 +727,8 @@ namespace gradylib {
             decltype(elements)::const_iterator iter;
 
         public:
-            const_iterator(FreeSparseMatrix const * m)
-                : iter(m->elements.begin())
+            const_iterator(decltype(elements)::const_iterator iter)
+                : iter(iter)
             {
             }
 
@@ -749,11 +751,11 @@ namespace gradylib {
         };
 
         const_iterator begin() const {
-            return const_iterator{this};
+            return const_iterator{elements.begin()};
         }
 
         const_iterator end() const {
-            return const_iterator{this};
+            return const_iterator{elements.end()};
         }
     };
 }

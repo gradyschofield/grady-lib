@@ -59,6 +59,7 @@ if(BUILD_TESTING)
             src/test/TestOpenHashMapTC2.cpp
             src/test/TestOpenHashSet.cpp
             src/test/TestOpenHashSetTC.cpp
+            src/test/TestSparseDirect.cpp
     )
 
     add_executable(gradylib-tests ${TEST_SRC})

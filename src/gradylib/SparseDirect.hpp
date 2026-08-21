@@ -5,6 +5,8 @@
 #ifndef CONTROL_SPARSEDIRECT_HPP
 #define CONTROL_SPARSEDIRECT_HPP
 
+#include<ranges>
+
 #include"SparseMatrix.hpp"
 #include"OpenHashSetTC.hpp"
 
@@ -12,25 +14,27 @@ namespace gradylib {
     namespace sparse_direct_utilities {
 
         class SparseUpperTriangularMatrix {
-            std::vector<std::vector<uint32_t>> columnIndexes;
-            std::vector<std::vector<double>> rows;
+            std::vector<std::vector<uint32_t>> rowIndexes;
+            std::vector<std::vector<double>> columns;
         public:
 
-            SparseUpperTriangularMatrix(std::vector<std::vector<uint32_t>> && columnIndexes, std::vector<std::vector<double>> && rows)
-                : columnIndexes(std::move(columnIndexes)), rows(std::move(rows))
+            SparseUpperTriangularMatrix() = default;
+
+            SparseUpperTriangularMatrix(std::vector<std::vector<uint32_t>> && rowIndexes, std::vector<std::vector<double>> && columns)
+                : rowIndexes(std::move(rowIndexes)), columns(std::move(columns))
             {
             }
 
             std::vector<double> solve(std::vector<double> y) const {
                 std::vector<double> x(y.size());
-                for (uint32_t n = 0; n < columnIndexes.size(); ++n) {
-                    uint32_t j = columnIndexes.size() - 1 - n;
-                    std::vector<double> const & r = rows[j];
-                    double t = y[j] / r[0];
+                for (uint32_t n = 0; n < rowIndexes.size(); ++n) {
+                    uint32_t j = rowIndexes.size() - 1 - n;
+                    std::vector<double> const & c = columns[j];
+                    double t = y[j] / c.back();
                     x[j] = t;
-                    std::vector<uint32_t> const & cIdx = columnIndexes[j];
-                    for (uint32_t i = 1; i < columnIndexes.size(); ++i) {
-                        y[cIdx[i]] -= t * r[i];
+                    std::vector<uint32_t> const & rIdx = rowIndexes[j];
+                    for (uint32_t i = 0; i < rIdx.size()-1; ++i) {
+                        y[rIdx[i]] -= t * c[i];
                     }
                 }
                 return x;
@@ -41,6 +45,8 @@ namespace gradylib {
             std::vector<std::vector<uint32_t>> rowIndexes;
             std::vector<std::vector<double>> columns;
         public:
+
+            SparseLowerTriangularMatrix() = default;
 
             SparseLowerTriangularMatrix(uint32_t n)
                 : rowIndexes(n), columns(n)
@@ -84,7 +90,7 @@ namespace gradylib {
                     double t = y[j] / cols[0];
                     x[j] = t;
                     std::vector<uint32_t> const & rIdx = rowIndexes[j];
-                    for (uint32_t i = 1; i < rowIndexes.size(); ++i) {
+                    for (uint32_t i = 1; i < rIdx.size(); ++i) {
                         y[rIdx[i]] -= t * cols[i];
                     }
                 }
@@ -98,51 +104,68 @@ namespace gradylib {
                         m(j, i) = val;
                     }
                 }
-                std::vector<uint32_t> columnCounts(rowIndexes);
+                std::vector<uint32_t> columnCounts(rowIndexes.size());
                 for (auto [i, j, elem] : m) {
-                    columnCounts[i] += 1;
+                    columnCounts[j] += 1;
                 }
-                std::vector<std::vector<uint32_t>> columnIndexes(rowIndexes.size());
-                std::vector<std::vector<double>> rows(rowIndexes.size());
-                for (uint32_t i = 0; i < columnIndexes.size(); ++i) {
-                    columnIndexes[i].reserve(columnCounts[i]);
-                    rows[i].reserve(columnCounts[i]);
+                std::vector<std::vector<uint32_t>> rowIndexes2(rowIndexes.size());
+                std::vector<std::vector<double>> columns2(rowIndexes.size());
+                for (uint32_t i = 0; i < rowIndexes2.size(); ++i) {
+                    rowIndexes2[i].reserve(columnCounts[i]);
+                    columns2[i].reserve(columnCounts[i]);
                 }
                 for (auto [i, j, elem] : m) {
-                    columnIndexes[j].push_back(i);
-                    rows[j].push_back(elem);
+                    rowIndexes2[j].push_back(i);
+                    columns2[j].push_back(elem);
                 }
                 struct Data {
-                    uint32_t col;
+                    uint32_t row;
                     double el;
                 };
                 std::vector<Data> sorted;
-                for (uint32_t i = 0; i < columnIndexes.size(); ++i) {
-                    for (auto [j, el] : std::views::zip(columnIndexes[i], rows[i])) {
-                        sorted.emplace_bcak(j, el);
+                for (uint32_t i = 0; i < rowIndexes2.size(); ++i) {
+                    for (auto [j, el] : std::views::zip(rowIndexes2[i], columns2[i])) {
+                        sorted.emplace_back(j, el);
                     }
-                    sort(sorted.begin(), sorted.end(), [](auto x, auto y) {return x.col < y.col;});
-                    for (auto [j, el, sortedData] : std::views::zip(columnIndexes[i], rows[i], sorted)) {
-                        j = sortedData.col;
+                    sort(sorted.begin(), sorted.end(), [](auto x, auto y) {return x.row < y.row;});
+                    for (auto [j, el, sortedData] : std::views::zip(rowIndexes2[i], columns2[i], sorted)) {
+                        j = sortedData.row;
                         el = sortedData.el;
                     }
                     sorted.clear();
                 }
-                return SparseUpperTriangularMatrix(std::move(columnIndexes), std::move(rows));
+                return SparseUpperTriangularMatrix(std::move(rowIndexes2), std::move(columns2));
             }
         };
 
         class EliminationTree {
-            std::vector<uint32_t> parent;
+            std::vector<uint32_t> _parent;
+
         public:
-            EliminationTree(FixedSparseMatrix const & A) {
+            EliminationTree(FixedSparseMatrix const & A)
+                : _parent(A.numRows())
+            {
+                for (uint32_t i = 0; i < A.numRows(); ++i) {
+                    _parent[i] = i;
+                }
+                std::vector<uint32_t> Ak_idx;
+                std::vector<double> Ak;
+                for (uint32_t i = 1; i < A.numRows(); ++i) {
+                    A.fillLowerTriangularRow(Ak_idx, Ak, i);
+                    for (auto ii : Ak_idx) {
+                        while (_parent[ii] != ii) {
+                            ii = _parent[ii];
+                        }
+                        _parent[ii] = i;
+                    }
+                }
             }
 
             std::vector<uint32_t> reach(std::vector<uint32_t> const & Ak) {
                 OpenHashSetTC<uint32_t> r;
                 for (uint32_t i : Ak) {
-                    while (!r.insert(i) && parent[i] != i) {
-                        i = parent[i];
+                    while (!r.insert(i) && _parent[i] != i) {
+                        i = _parent[i];
                     }
                 }
                 std::vector<uint32_t> v;
@@ -151,6 +174,17 @@ namespace gradylib {
                 for (uint32_t i : r) v.push_back(i);
                 sort(v.begin(), v.end());
                 return v;
+            }
+
+            uint32_t root(uint32_t i ) const {
+                while (_parent[i] != i) {
+                    i = _parent[i];
+                }
+                return i;
+            }
+
+            uint32_t parent(uint32_t i) const {
+                return _parent[i];
             }
         };
 
@@ -165,7 +199,7 @@ namespace gradylib {
                 std::vector<uint32_t> Ak_idx;
                 std::vector<double> y;
                 y.reserve(m.numRows());
-                SparseLowerTriangularMatrix L(m.numRows());
+                L = SparseLowerTriangularMatrix(m.numRows());
                 for (uint32_t i = 0; i < m.numRows(); ++i) {
                     double d = 0;
                     if (i > 0) {
@@ -186,6 +220,7 @@ namespace gradylib {
                     Ak_idx.clear();
                     y.clear();
                 }
+                Lt = L.transpose();
             }
 
             std::vector<double> solve(std::vector<double> y) const {
