@@ -74,7 +74,7 @@ namespace gradylib {
                     uint32_t j = xIndexes[k];
                     std::vector<uint32_t> const & rIdx = rowIndexes[j];
                     std::vector<double> const & cols = columns[j];
-                    double t = y[k] / cols[0];
+                    double t = y[j-xIndexes.front()] / cols[0];
                     x.push_back(t);
                     for (uint32_t m = 1; m < rIdx.size() && rIdx[m] <= xIndexes.back(); ++m) {
                         y[rIdx[m]-xIndexes.front()] -= cols[m] * t;
@@ -161,10 +161,10 @@ namespace gradylib {
                 }
             }
 
-            std::vector<uint32_t> reach(std::vector<uint32_t> const & Ak) {
+            std::vector<uint32_t> reach(std::vector<uint32_t> const & Ak, int limit = std::numeric_limits<uint32_t>::max()) {
                 OpenHashSetTC<uint32_t> r;
                 for (uint32_t i : Ak) {
-                    while (!r.insert(i) && _parent[i] != i) {
+                    while (i < limit && !r.insert(i) && _parent[i] != i) {
                         i = _parent[i];
                     }
                 }
@@ -193,6 +193,8 @@ namespace gradylib {
             SparseUpperTriangularMatrix Lt;
         public:
 
+            CholeskyDecomposition() = default;
+
             CholeskyDecomposition(FixedSparseMatrix const & m) {
                 EliminationTree etree(m);
                 std::vector<double> Ak;
@@ -204,15 +206,17 @@ namespace gradylib {
                     double d = 0;
                     if (i > 0) {
                         m.fillLowerTriangularRow(Ak_idx, Ak, i);
-                        std::vector<uint32_t> xIndexes = etree.reach(Ak_idx);
-                        y.resize(xIndexes.back() - xIndexes.front());
-                        for (auto [j, el] : std::views::zip(Ak_idx, Ak)) {
-                            y[j] = el;
-                        }
-                        auto Lk = L.solve(xIndexes, y);
-                        L.addRow(i, xIndexes, Lk);
-                        for (double x : Lk) {
-                            d += x*x;
+                        std::vector<uint32_t> xIndexes = etree.reach(Ak_idx, i);
+                        if (!xIndexes.empty()) {
+                            y.resize(1 + xIndexes.back() - xIndexes.front(), 0.0);
+                            for (auto [j, el] : std::views::zip(Ak_idx, Ak)) {
+                                y[j-xIndexes.front()] = el;
+                            }
+                            auto Lk = L.solve(xIndexes, y);
+                            L.addRow(i, xIndexes, Lk);
+                            for (double x : Lk) {
+                                d += x*x;
+                            }
                         }
                     }
                     L.fillDiagonal(i, sqrt(m(i,i) - d));
@@ -229,10 +233,6 @@ namespace gradylib {
         };
     }
 
-    sparse_direct_utilities::SparseLowerTriangularMatrix choleskyDecomposition(FixedSparseMatrix const & A) {
-        using namespace sparse_direct_utilities;
-        EliminationTree etree(A);
-    }
 }
 
 #endif

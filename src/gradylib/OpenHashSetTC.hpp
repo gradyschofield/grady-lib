@@ -235,7 +235,8 @@ namespace gradylib {
 
         template<typename KeyType>
         requires std::is_convertible_v<KeyType, Key>
-        void insert(KeyType && keyArg) {
+        // Returns true if the value is already in the set
+        bool insert(KeyType && keyArg) {
             Key key{keyArg};
             if (readOnly) {
                 std::ostringstream sstr;
@@ -271,7 +272,7 @@ namespace gradylib {
                 }
             }
             if (doesContain) {
-                return;
+                return true;
             }
             if (setSize >= keySize * loadFactor) {
                 rehash();
@@ -289,6 +290,7 @@ namespace gradylib {
             setFlags.setBoth(idx);
             keys[idx] = key;
             ++setSize;
+            return false;
         }
 
         bool contains(Key const &key) const {

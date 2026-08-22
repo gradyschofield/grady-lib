@@ -136,6 +136,12 @@ namespace gradylib {
             if (opts.verbose.value()) {
                 std::cout << "iter " << iter << " rel resnorm: " << resNorm.back() / bNorm << " computed residual norm: " << resNorm.back() << " true residual norm: " << norm(b-A*x.back()) << "\n";
             }
+            if (iter > 2) {
+                x.pop_front();
+                v.pop_front();
+                w.pop_front();
+                t.pop_front();
+            }
         }
         std::cout << "stats: " << iter << " " << norm(b - A*x.back())/norm(b) << "\n";
         return x.back();

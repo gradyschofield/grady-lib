@@ -78,6 +78,8 @@ TEST_CASE("EliminationTree 3") {
     REQUIRE(etree.parent(9) == 10);
     REQUIRE(etree.parent(10) == 10);
 
+    REQUIRE(etree.root(0) == 10);
+
     REQUIRE(etree.reach(vector{0u}) == vector{0u, 5u, 6u, 8u, 9u, 10u});
     REQUIRE(etree.reach(vector{1u}) == vector{1u, 2u, 7u, 9u, 10u});
     REQUIRE(etree.reach(vector{2u}) == vector{2u, 7u, 9u, 10u});
@@ -166,3 +168,68 @@ TEST_CASE("SparseLowerTriangular Solve 4") {
     REQUIRE(x.size() == 1);
     REQUIRE_THAT(x[0], WithinRel(3.0/2, 1E-15));
 }
+
+TEST_CASE("Cholesky 1") {
+    FreeSparseMatrix fsm;
+    for (int i = 0; i < 3; ++i) {
+        fsm.setBoth(i, i, 10.0);
+    }
+    fsm.setBoth(0, 2, 1.0);
+
+    FixedSparseMatrix m = fsm.makeFixed();
+    CholeskyDecomposition cholesky(m);
+
+    vector y{1.0, 2.0, 3.0};
+    auto x = cholesky.solve(y);
+    REQUIRE_THAT(x[0], WithinRel(7.0/99, 1E-15));
+    REQUIRE_THAT(x[1], WithinRel(1.0/5, 1E-15));
+    REQUIRE_THAT(x[2], WithinRel(29.0/99, 1E-15));
+}
+
+
+TEST_CASE("Cholesky 2") {
+    FreeSparseMatrix fsm;
+    for (int i = 1; i <= 11; ++i) {
+        fsm.setBoth(i, i, 10.0);
+    }
+    // The nonzero pattern is from Timothy A. Davis's book Direct Methods for Sparse Linear System Section, 4.1 page 39
+    fsm.setBoth(1, 6, 1.0);
+    fsm.setBoth(1, 7, 1.0);
+    fsm.setBoth(2, 3, 1.0);
+    fsm.setBoth(2, 8, 1.0);
+    fsm.setBoth(3, 10, 1.0);
+    fsm.setBoth(3, 11, 1.0);
+    fsm.setBoth(4, 6, 1.0);
+    fsm.setBoth(4, 10, 1.0);
+    fsm.setBoth(5, 8, 1.0);
+    fsm.setBoth(5, 11, 1.0);
+    fsm.setBoth(6, 9, 1.0);
+    fsm.setBoth(6, 10, 1.0);
+    fsm.setBoth(7, 11, 1.0);
+    fsm.setBoth(8, 10, 1.0);
+    fsm.setBoth(8, 11, 1.0);
+    fsm.setBoth(10, 11, 1.0);
+    FreeSparseMatrix fsm2;
+    for (auto [i, j, el] : fsm) {
+        fsm2.setBoth(i-1, j-1, el);
+    }
+
+    FixedSparseMatrix m = fsm2.makeFixed();
+    CholeskyDecomposition cholesky(m);
+
+    vector<double> y;
+    for (int i = 1; i <= 11; ++i) y.push_back(i);
+    auto x = cholesky.solve(y);
+    REQUIRE_THAT(x[0], WithinRel(-0.0023541818828705496, 1E-13));
+    REQUIRE_THAT(x[1], WithinRel(0.12870025487700817, 1E-13));
+    REQUIRE_THAT(x[2], WithinRel(0.12428403405878309, 1E-13));
+    REQUIRE_THAT(x[3], WithinRel(0.2817036599482077, 1E-13));
+    REQUIRE_THAT(x[4], WithinRel(0.35570616887648027, 1E-13));
+    REQUIRE_THAT(x[5], WithinRel(0.40872889004682467, 1E-13));
+    REQUIRE_THAT(x[6], WithinRel(0.6148129287818809, 1E-13));
+    REQUIRE_THAT(x[7], WithinRel(0.588713417171135, 1E-13));
+    REQUIRE_THAT(x[8], WithinRel(0.8591271109953176, 1E-13));
+    REQUIRE_THAT(x[9], WithinRel(0.7742345104710987, 1E-13));
+    REQUIRE_THAT(x[10], WithinRel(0.8542248940640622, 1E-13));
+}
+

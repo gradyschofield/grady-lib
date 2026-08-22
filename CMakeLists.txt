@@ -33,6 +33,7 @@ set(SRC
         src/gradylib/SparseDirect.hpp
         src/gradylib/SparseLeastSquares.hpp
         src/gradylib/SparseMatrix.hpp
+        src/gradylib/SparsePreconditioners.hpp
         src/gradylib/SparseSolvers.hpp
         src/gradylib/ThreadPool.hpp
         src/gradylib/ParallelTraversals.hpp

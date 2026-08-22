@@ -11,7 +11,8 @@
 #include<ranges>
 
 #include"OpenHashMapTC.hpp"
-#include "SparseMatrix.hpp"
+#include"OpenHashSetTC.hpp"
+#include"SparseMatrix.hpp"
 
 namespace gradylib {
     namespace file_utilities {
@@ -108,16 +109,16 @@ namespace gradylib {
 
         inline std::vector<double> operator-(std::vector<double> const & x, std::vector<double> const & y) {
             std::vector<double> ret(x.size());
-            for (auto [ret, x, y] : std::views::zip(ret, x, y)) {
-                ret = x - y;
+            for (size_t i = 0; i < ret.size(); ++i) {
+                ret[i] = x[i] - y[i];
             }
             return ret;
         }
 
         inline std::vector<double> operator+(std::vector<double> const & x, std::vector<double> const & y) {
             std::vector<double> ret(x.size());
-            for (auto [ret, x, y] : std::views::zip(ret, x, y)) {
-                ret = x + y;
+            for (size_t i = 0; i < ret.size(); ++i) {
+                ret[i] = x[i] + y[i];
             }
             return ret;
         }
@@ -150,8 +151,17 @@ namespace gradylib {
 
         inline double dot(std::vector<double> const & x, std::vector<double> const & y) {
             double d = 0;
-            for (auto [x, y] : std::views::zip(x, y)) {
-                d += x*y;
+            for (size_t i = 0; i < x.size(); ++i) {
+                d += x[i] *y[i];
+            }
+            return d;
+        }
+
+        inline double dot(std::vector<double> const & weight, std::vector<double> const & x, std::vector<double> const & y) {
+            double d = 0;
+            size_t len = std::min(weight.size(), std::min(x.size(), y.size()));
+            for (size_t i = 0; i < len; ++i) {
+                d += weight[i] * x[i] * y[i];
             }
             return d;
         }
@@ -279,6 +289,94 @@ namespace gradylib {
             }
         }
 
+        FixedSparseMatrix matrixTimesSelfTranspose(std::vector<double> const & diag, bool excludeLastRow = false) const {
+            using gradylib::OpenHashSetTC;
+            using std::vector;
+            vector<OpenHashSetTC<uint32_t>> rowsWithColumnNonzero(numColumns());
+            uint32_t limit = excludeLastRow ? numColumns()-1 : std::numeric_limits<uint32_t>::max();
+            for (uint32_t i = 0; i < numRows(); ++i) {
+                for (uint32_t j : columnIndexes[i]) {
+                    if (j < limit) {
+                        rowsWithColumnNonzero[j].insert(i);
+                    }
+                }
+            }
+            vector<vector<uint32_t>> newColumnIndexes(numRows());
+            for (uint32_t i = 0; i < numRows(); ++i) {
+                OpenHashSetTC<uint32_t> possibleOverlap;
+                // Get rows that might overlap
+                for (uint32_t j : columnIndexes[i]) {
+                    if (j < limit) {
+                        for (uint32_t k : rowsWithColumnNonzero[j]) {
+                            possibleOverlap.insert(k);
+                        }
+                    }
+                }
+                // Get rows that definenly overlap
+                vector<uint32_t> cIdxs;
+                cIdxs.reserve(possibleOverlap.size());
+                auto doesIntersect = [](vector<uint32_t> const & c1, vector<uint32_t> const & c2) {
+                    auto iter1 = c1.begin();
+                    auto iter2 = c2.begin();
+                    while (iter1 != c1.end() && iter2 != c2.end()) {
+                        if (*iter1 == *iter2) {
+                            return true;
+                        }
+                        if (*iter1 < *iter2) {
+                            ++iter1;
+                        } else {
+                            ++iter2;
+                        }
+                    }
+                    return false;
+                };
+                for (uint32_t k : possibleOverlap) {
+                    if (doesIntersect(columnIndexes[i], columnIndexes[k])) {
+                        cIdxs.push_back(k);
+                    }
+                }
+                std::sort(cIdxs.begin(), cIdxs.end());
+                newColumnIndexes[i] = std::move(cIdxs);
+            }
+            auto sparseDot = [&diag](vector<uint32_t> const & c1, vector<double> const & row, vector<uint32_t> const & c2, vector<double> const & col) {
+                auto iter1 = c1.begin();
+                auto iter2 = c2.begin();
+                auto rowIter = row.begin();
+                auto colIter = col.begin();
+                double d = 0;
+                while (iter1 != c1.end() && iter2 != c2.end()) {
+                    if (*iter1 == *iter2) {
+                        double factor = 1.0;
+                        if (!diag.empty()) {
+                            factor = diag[*iter1];
+                        }
+                        d += factor * *rowIter * *colIter;
+                        ++iter1;
+                        ++iter2;
+                        ++rowIter;
+                        ++colIter;
+                    } else if (*iter1 < *iter2) {
+                        ++iter1;
+                        ++rowIter;
+                    } else {
+                        ++iter2;
+                        ++colIter;
+                    }
+                }
+                return d;
+            };
+            vector<vector<double>> newRows(numRows());
+            for (uint32_t i = 0; i < numRows(); ++i) {
+                vector<double> newRow;
+                newRow.reserve(newColumnIndexes[i].size());
+                for (uint32_t j : newColumnIndexes[i]) {
+                    newRow.push_back(sparseDot(columnIndexes[i], rows[i], columnIndexes[j], rows[j]));
+                }
+                newRows[i] = std::move(newRow);
+            }
+            return FixedSparseMatrix(std::move(newRows), std::move(newColumnIndexes), numRows());
+        }
+
         bool empty() const {
             return rows.empty();
         }
@@ -321,7 +419,7 @@ namespace gradylib {
             }
 
             // The length of y can exceed N which aids in the use of this function in certain preconditioners
-            std::vector<double> inverse(std::vector<double> const & y) {
+            std::vector<double> inverse(std::vector<double> const & y) const {
                 using namespace gradylib::std_vector_operators;
                 double gamma = y[N-1];
                 double beta = (gamma - dot(g, Dinv*y)) / (alpha - dot(g, Dinv*g));
@@ -476,10 +574,13 @@ namespace gradylib {
         }
 
         std::vector<double> operator*(std::vector<double> const & v) const {
-            std::vector<double> ret(numRows());
+            using std::vector;
+            vector<double> ret(numRows());
             for (uint32_t i = 0; i < columnIndexes.size(); ++i) {
-                for (auto [j, value] : std::views::zip(columnIndexes[i], rows[i])) {
-                    ret[i] += v[j] * value;
+                vector<uint32_t> const & cIdxs = columnIndexes[i];
+                vector<double> const & r = rows[i];
+                for (size_t k = 0; k < cIdxs.size(); ++k) {
+                    ret[i] += v[cIdxs[k]] * r[k];
                 }
             }
             return ret;
@@ -648,6 +749,8 @@ namespace gradylib {
         iterator end() const {
             return iterator{this};
         }
+
+        friend FreeSparseMatrix;
     };
 
 
@@ -655,6 +758,27 @@ namespace gradylib {
         gradylib::OpenHashMapTC<MatrixCoordinate, double> elements;
 
     public:
+
+        FreeSparseMatrix() = default;
+
+        FreeSparseMatrix(FixedSparseMatrix const & m) {
+            for (uint32_t i = 0; i < m.numRows(); ++i) {
+                for (auto [j, el] : std::views::zip(m.columnIndexes[i], m.rows[i])) {
+                    operator()(i, j) = el;
+                }
+            }
+        }
+
+        bool isSymmetric() const {
+            for (auto [coord, el] : elements) {
+                MatrixCoordinate c(coord.getJ(), coord.getI());
+                if (!elements.contains(c) || (el != 0 && fabs(elements.at(c)-el) / fabs(el) > 1E-12)) {
+                    std::cout << el << " " << elements.at(c) << std::endl;
+                    return false;
+                }
+            }
+            return true;
+        }
 
         double & operator()(uint32_t i, uint32_t j) {
             return elements[MatrixCoordinate{i, j}];
