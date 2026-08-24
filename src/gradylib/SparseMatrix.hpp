@@ -2,6 +2,7 @@
 #define SPARSEMATRIX_HPP
 
 #include<cassert>
+#include<cmath>
 #include<list>
 #include<numeric>
 #include<sstream>
