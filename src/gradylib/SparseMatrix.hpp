@@ -102,6 +102,14 @@ namespace gradylib {
             return sqrt(std::accumulate(v.begin(), v.end(), 0.0, [](double sum, double element){ return sum + element*element;}));
         }
 
+        inline std::vector<double> abs(std::vector<double> const & v) {
+            auto w(v);
+            for (double & x : w) {
+                x = fabs(x);
+            }
+            return w;
+        }
+
         inline std::vector<double> normalize(std::vector<double> v) {
             double n = 1.0 / norm(v);
             for (double & t : v) t *= n;
@@ -148,6 +156,13 @@ namespace gradylib {
                 t *= ainv;
             }
             return ret;
+        }
+
+        inline std::vector<double> operator/(std::vector<double> x, std::vector<double> const & y) {
+            for (size_t i = 0; i < x.size(); ++i) {
+                x[i] /= y[i];
+            }
+            return x;
         }
 
         inline double dot(std::vector<double> const & x, std::vector<double> const & y) {

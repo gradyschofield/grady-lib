@@ -29,7 +29,7 @@ namespace gradylib {
             double sTyInv = 1.0 / *sTyIter;
             //apply RHS
             double sDotIn = dot(s, in);
-            vector<double> rhsOut = move(in);
+            vector<double> rhsOut = std::move(in);
             for (size_t i = 0; i < rhsOut.size(); ++i) {
                 rhsOut[i] -= y[i] * sDotIn * sTyInv;
             }
@@ -105,7 +105,7 @@ namespace gradylib {
             auto sIter = s.rbegin();
             auto yIter = y.rbegin();
             auto sTyIter = sTy.rbegin();
-            auto ret = apply(move(x), sIter, yIter, sTyIter);
+            auto ret = apply(std::move(x), sIter, yIter, sTyIter);
             return ret;
         }
 
